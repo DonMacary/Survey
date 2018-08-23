@@ -5,24 +5,19 @@
 #include <string.h>
 #include <iostream>
 
-void getUserName();
-typedef enum EXTENDED_NAME_FORMAT {
-	NameUnknown,
-	NameFullyQualifiedDN,
-	NameSamCompatible,
-	NameDisplay,
-	NameUniqueId,
-	NameCanonical,
-	NameUserPrincipal,
-	NameCanonicalEx,
-	NameServicePrincipal,
-	NameDnsDomain,
-	NameGivenName,
-	NameSurname
-}  *PEXTENDED_NAME_FORMAT;
 
-BOOLEAN SEC_ENTRY getUserName(
-	EXTENDED_NAME_FORMAT NameFullyQualifiedDN,
-	LPSTR                lpNameBuffer,
-	PULONG               nSize
-);
+void getSysName()
+{
+	TCHAR buffer[256] = TEXT("");
+	DWORD dwSize = sizeof(buffer);
+
+	GetComputerNameEx(ComputerNameDnsFullyQualified, buffer, &dwSize);
+	std::cout << "FQDN: " << buffer << std::endl;
+
+	GetComputerNameEx(ComputerNameDnsHostname, buffer, &dwSize);
+	std::cout << "Hostname: " << buffer << std::endl;
+
+	GetComputerNameEx(ComputerNameDnsDomain, buffer, &dwSize);
+	std::cout << "Domain Name: " << buffer << std::endl;
+
+};
