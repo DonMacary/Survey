@@ -20,4 +20,20 @@
 /       get-hotfixes
 /           report all patches on the system
 **********************************************************************************************************************/
-#include <windows.h>
+#include <iostream>
+#include "Header.h"
+
+
+
+int main(void)
+{
+	getSysName();
+
+
+
+	getchar();
+	getchar();
+	return 0;
+}
+
+

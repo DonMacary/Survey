@@ -23,6 +23,16 @@ This program is intended to be a windows post-exploitation tool to scout the tar
 get-systeminfo
 
     get-systeminfo will gather basic system information. (Hardware/OS Info)
+        OS Name 
+        OS Version
+        Architecture
+        Hostname
+        Domain Name
+        FQDN
+        Windows Directory
+        System Directory
+        Local Time
+        Last Boot time
 
 get-interactivelogons
 
