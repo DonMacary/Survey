@@ -1,11 +1,11 @@
 /********************************************************************************************************************
-/   AUTHORS: ELF, Verring
+/   AUTHORS: ELF, Vering
 /   PROGRAM NAME: win_survey.cpp
 /   PROGRAM DESCRIPTION: Windows Host Enumeration Survey
 /   FUNCTIONS:
 /       get-systeminfo
 /           gather basic system information. (Hardware/OS Info)
-/       get-interactivelogons 
+/       get-interactivelogons
 /           get information about which users are interactively logged on to the system
 /       get-lastlogin
 /            get information about the last logged on user
@@ -20,4 +20,17 @@
 /       get-hotfixes
 /           report all patches on the system
 **********************************************************************************************************************/
-#include <windows.h>
+#define _WIN32_WINNT 0x0500
+#define ISSP_LEVEL SECURITY_WIN32
+
+#include "Function_calls.h"
+
+int main(void)
+{
+	//getSysName();
+	getName();
+	getUserName();
+	getchar();
+	getchar();
+	return 0;
+}

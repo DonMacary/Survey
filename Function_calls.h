@@ -4,25 +4,34 @@
 #include <tchar.h>
 #include <string.h>
 #include <iostream>
+#include <secext.h>
+#include <security.h>
+#include <windef.h>
 
+
+void getName();
 void getUserName();
-typedef enum EXTENDED_NAME_FORMAT {
-	NameUnknown,
-	NameFullyQualifiedDN,
-	NameSamCompatible,
-	NameDisplay,
-	NameUniqueId,
-	NameCanonical,
-	NameUserPrincipal,
-	NameCanonicalEx,
-	NameServicePrincipal,
-	NameDnsDomain,
-	NameGivenName,
-	NameSurname
-}  *PEXTENDED_NAME_FORMAT;
 
-BOOLEAN SEC_ENTRY getUserName(
-	EXTENDED_NAME_FORMAT NameFullyQualifiedDN,
-	LPSTR                lpNameBuffer,
-	PULONG               nSize
-);
+void getName()
+{
+	TCHAR buffer[256] = TEXT("");
+	DWORD dwSize = sizeof(buffer);
+	GetComputerNameEx(ComputerNameDnsFullyQualified, buffer, &dwSize);
+
+	std::cout << buffer << std::endl;
+	GetComputerNameEx(ComputerNameDnsHostname, buffer, &dwSize);
+	std::cout << buffer << std::endl;
+
+	GetComputerNameEx(ComputerNameDnsDomain, buffer, &dwSize);
+	std::cout << buffer << std::endl;
+
+}
+
+void getUserName()
+{
+	TCHAR buffer[256] = TEXT("");
+	PULONG nSize = sizeof(buffer);
+	GetUserNameEx(NameFullyQualifiedDN, buffer, nSize);
+
+	std::cout << buffer << std::endl;
+}
