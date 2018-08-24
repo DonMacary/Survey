@@ -24,11 +24,11 @@
 #include <windows.h>
 #include "Function_calls.h"
 
-
 int main(void)
 {
 	getSystemInfo();
 	getUserName();
+
 	getchar();
 	getchar();
 	return 0;

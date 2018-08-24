@@ -1,6 +1,9 @@
 #pragma once
 #pragma comment(lib, "Secur32.lib")
 #define SECURITY_WIN32
+#define _WIN32_WINNT 0x0500
+
+#include <windows.h>
 #include <stdio.h>
 #include <tchar.h>
 #include <string.h>
@@ -10,6 +13,10 @@
 
 void getSysName();
 void getOSInfo();
+void getArchitecture();
+void getWindowsPath();
+void getSystemPath();
+void getTime();
 void getSystemInfo();
 void getUserName();
 
@@ -38,7 +45,7 @@ void getSysName()
 	{
 		std::cout << "Hostname: " << buffer << std::endl;		//prints it out
 	}
-
+	
 	ZeroMemory(buffer, dwSize);				 //empty the string  and the size
 
 	if (!GetComputerNameEx(ComputerNameDnsDomain, buffer, &dwSize))		//grabs the domain name
@@ -49,7 +56,7 @@ void getSysName()
 	{
 		std::cout << "Domain Name: " << buffer << std::endl;	//prints it out
 	}
-
+	
 	ZeroMemory(buffer, dwSize);				 //empty the string  and the size
 
 };
@@ -261,12 +268,9 @@ void getOSInfo()
 		break;
 	}
 
+};
 
-}
-
-
-
-//gathers native system information and then checks the processor architecture and reports it. Uses the GetNativeSystemInfo API. 
+//gathers natvie system information and then checks the processor architecture and reports it. Uses the GetNativeSystemInfo API. 
 void getArchitecture()
 {
 	std::cout << "Architecture: ";
@@ -276,36 +280,105 @@ void getArchitecture()
 	//https://msdn.microsoft.com/en-us/library/windows/desktop/ms724958(v=vs.85).aspx 
 	switch (sys.wProcessorArchitecture)
 	{
-	case 0:
-		std::cout << "x86" << std::endl;
-		break;
-	case 5:
-		std::cout << "ARM" << std::endl;
-		break;
-	case 6:
-		std::cout << "Intel Itanium-based" << std::endl;
-		break;
-	case 9:
-		std::cout << "x64" << std::endl;
-		break;
-	case 12:
-		std::cout << "ARM64" << std::endl;
-		break;
-	default:
-		std::cout << "Unknown" << std::endl;
-		break;
+		case 0:
+			std::cout << "x86" << std::endl;
+			break;
+		case 5:
+			std::cout << "ARM" << std::endl;
+			break;
+		case 6:
+			std::cout << "Intel Itanium-based" << std::endl;
+			break;
+		case 9:
+			std::cout << "x64" << std::endl;
+			break;
+		case 12:
+			std::cout << "ARM64" << std::endl;
+			break;
+		default:
+			std::cout << "Unknown" << std::endl;
+			break;
 	}
 
-}
+};
+
+
+//prints the path to the windows directory (most of the time this will be C:\Windows...) This uses the GetWindowsDirectory API. 
+void getWindowsPath()
+{
+	TCHAR PATH[256] = TEXT("");		//variable to store the path
+	DWORD size = sizeof(PATH);		//size of the path variable 
+	UINT results = GetWindowsDirectory(PATH, size);		//stores the path in the variable and the sresult of the function is an int which means various things
+
+	//if the result int is = 0 then the GetWindowsDirectory API failed
+	if (results == 0)
+	{
+		std::cout << "Windows Directory Path: Failed to find" << std::endl;
+	}
+	//if the result is = the size of the path variable then it means that the path is too long to print (we would need to increase the path buffer)
+	else if (results == size)
+	{
+		std::cout << "Windows Directory Path: Path is too large to print" << std::endl;
+	}
+	//otherwise were successful so print the path!
+	else
+	{
+		std::cout << "Windows Directory Path: " << PATH << std::endl;
+	}
+};
+
+//prints the path to the system directory (C:\Windows\System32 usually..) Uses the GetSystemDirectory API
+void getSystemPath()
+{
+	TCHAR PATH[256] = TEXT("");		//variable to store the path
+	DWORD size = sizeof(PATH);		//size of the path variable 
+	UINT results = GetSystemDirectory(PATH, size);		//stores the path in the variable and the sresult of the function is an int which means various things
+												//if the result int is = 0 then the GetWindowsDirectory API failed
+	if (results == 0)
+	{
+		std::cout << "Windows System Path: Failed to find" << std::endl;
+	}
+	//if the result is = the size of the path variable then it means that the path is too long to print (we would need to increase the path buffer)
+	else if (results == size)
+	{
+		std::cout << "Windows System Path: Path is too large to print" << std::endl;
+	}
+	//otherwise were successful so print the path!
+	else
+	{
+		std::cout << "Windows System Path: " << PATH << std::endl;
+	}
+
+};
+
+//utilizes the GetLocalTime and GetSystemTime APIs to report the local and system time of the host. 
+void getTime()
+{
+	SYSTEMTIME localtime;			//local time variable
+	SYSTEMTIME systime;				//system time (UTC) variable
+	GetLocalTime(&localtime);		//API to get the local time
+	GetSystemTime(&systime);		//API to get the system time
+	std::cout << "Local Time: " << localtime.wMonth << "/" << localtime.wDay << "/" << localtime.wYear << " " << localtime.wHour << ":" << localtime.wMinute
+		<< ":" << localtime.wSecond << std::endl;
+	std::cout << "System Time: " << systime.wMonth << "/" << systime.wDay << "/" << systime.wYear << " " << systime.wHour << ":" << systime.wMinute
+		<< ":" << systime.wSecond << std::endl;
+
+};
+
+//main function to report Target's system information. This is called in main. 
 void getSystemInfo()
 {
 	std::cout << "[+] System Information" << std::endl << std::endl;
 
-	getOSInfo();
-	getArchitecture();
-	getSysName(); //gets the System hostname, FQDN and Domain Name
+	getOSInfo();			//reports the operating system name
+	getArchitecture();		//reports the system architecture type 
+	getSysName();			//reports the System hostname, FQDN and Domain Name
+	getWindowsPath();		//reports the Windows directory path
+	getSystemPath();		//reports the System directory path
+	getTime();				//reports thte Local and System time
 
 };
+
 //gets the username of the currently logged in user
 void getUserName()
 {
@@ -316,4 +389,6 @@ void getUserName()
 
 	std::cout << "NameSamCompatible: " << buffer << std::endl;
 
-}
+};
+
+
