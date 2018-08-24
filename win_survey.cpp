@@ -20,6 +20,7 @@
 /       get-hotfixes
 /           report all patches on the system
 **********************************************************************************************************************/
+#include <Windows.h>
 #include <iostream>
 #include "Function_calls.h"
 
