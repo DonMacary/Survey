@@ -1,8 +1,6 @@
 #pragma once
-#define _WIN32_WINNT 0x0500
+#pragma comment(lib, "Secur32.lib")
 #define SECURITY_WIN32
-
-#include <windows.h>
 #include <stdio.h>
 #include <tchar.h>
 #include <string.h>

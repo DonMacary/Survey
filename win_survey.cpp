@@ -21,6 +21,7 @@
 /           report all patches on the system
 **********************************************************************************************************************/
 #include <iostream>
+#include <windows.h>
 #include "Function_calls.h"
 
 
