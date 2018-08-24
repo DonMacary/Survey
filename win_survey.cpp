@@ -20,15 +20,13 @@
 /       get-hotfixes
 /           report all patches on the system
 **********************************************************************************************************************/
-#define _WIN32_WINNT 0x0500
-#define ISSP_LEVEL SECURITY_WIN32
-
+#include <iostream>
 #include "Function_calls.h"
+
 
 int main(void)
 {
-	//getSysName();
-	getName();
+	getSystemInfo();
 	getUserName();
 	getchar();
 	getchar();
