@@ -5,7 +5,7 @@
 /   FUNCTIONS:
 /       get-systeminfo
 /           gather basic system information. (Hardware/OS Info)
-/       get-interactivelogons 
+/       get-interactivelogons
 /           get information about which users are interactively logged on to the system
 /       get-lastlogin
 /            get information about the last logged on user
@@ -21,15 +21,13 @@
 /           report all patches on the system
 **********************************************************************************************************************/
 #include <iostream>
-#include "Header.h"
+#include "Function_calls.h"
 
 
 
 int main(void)
 {
-	getSysName();
-
-
+	getSystemInfo();
 
 	getchar();
 	getchar();
