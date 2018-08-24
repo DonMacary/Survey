@@ -1,5 +1,5 @@
 /********************************************************************************************************************
-/   AUTHORS: ELF, Verring
+/   AUTHORS: ELF, Vering
 /   PROGRAM NAME: win_survey.cpp
 /   PROGRAM DESCRIPTION: Windows Host Enumeration Survey
 /   FUNCTIONS:
@@ -20,19 +20,16 @@
 /       get-hotfixes
 /           report all patches on the system
 **********************************************************************************************************************/
-#include <Windows.h>
 #include <iostream>
+#include <windows.h>
 #include "Function_calls.h"
-
-
 
 int main(void)
 {
 	getSystemInfo();
+	getUserName();
 
 	getchar();
 	getchar();
 	return 0;
 }
-
-

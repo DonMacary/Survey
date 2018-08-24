@@ -1,4 +1,6 @@
 #pragma once
+#pragma comment(lib, "Secur32.lib")
+#define SECURITY_WIN32
 #define _WIN32_WINNT 0x0500
 
 #include <windows.h>
@@ -7,7 +9,7 @@
 #include <string.h>
 #include <iostream>
 #include <VersionHelpers.h>
-
+#include <security.h>
 
 void getSysName();
 void getOSInfo();
@@ -16,6 +18,7 @@ void getWindowsPath();
 void getSystemPath();
 void getTime();
 void getSystemInfo();
+void getUserName();
 
 //Uses GetComputerNameEX API to gather the FQDN, Hostname and Domain Name from the system
 void getSysName()
@@ -375,3 +378,17 @@ void getSystemInfo()
 	getTime();				//reports thte Local and System time
 
 };
+
+//gets the username of the currently logged in user
+void getUserName()
+{
+	TCHAR buffer[256] = TEXT("");
+	DWORD buffer_size = sizeof(buffer);
+	LPDWORD nSize = &buffer_size;
+	GetUserNameEx(NameSamCompatible, buffer, nSize);
+
+	std::cout << "NameSamCompatible: " << buffer << std::endl;
+
+};
+
+
