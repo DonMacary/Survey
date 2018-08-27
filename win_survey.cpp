@@ -20,8 +20,15 @@
 /       get-hotfixes
 /           report all patches on the system
 **********************************************************************************************************************/
-#include <iostream>
+
+#define WIN32_LEAN_AND_MEAN
+
+#undef _WINSOCKAPI_
+#define _WINSOCKAPI_
 #include <windows.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <iostream>
 #include "Function_calls.h"
 
 int main(void)
@@ -29,7 +36,7 @@ int main(void)
 	getSystemInfo();
 	getUserName();
 	getNetworkInfo();
-
+	getNetstat();
 	getchar();
 	getchar();
 	return 0;

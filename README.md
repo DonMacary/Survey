@@ -43,7 +43,7 @@ get-lastlogin
 
 get-networkinfo
 
-    get-networkinfo will get information about the network adapters the host has.
+    get-networkinfo will get information about the network adapters the host has using the GetAapterInfo API.
 
 get-processes
 

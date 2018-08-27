@@ -1,21 +1,28 @@
 #pragma once
 #pragma comment(lib, "Secur32.lib")
 #pragma comment(lib, "iphlpapi.lib")
+#pragma comment(lib, "Ws2_32.lib")
 #define SECURITY_WIN32
 //#define _WIN32_WINNT 0x0500
-#ifndef WIN32_LEAN_AND_MEAN
+
 #define WIN32_LEAN_AND_MEAN
-#endif
 
-
+#undef _WINSOCKAPI_
+#define _WINSOCKAPI_
 #include <windows.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include <stdio.h>
 #include <tchar.h>
 #include <string.h>
 #include <iostream>
+#include <iomanip>
 #include <VersionHelpers.h>
 #include <security.h>
 #include <iphlpapi.h>
+#include <Iprtrmib.h>
+
+
 
 void getSysName();
 void getOSInfo();
@@ -26,6 +33,7 @@ void getTime();
 void getSystemInfo();
 void getNetworkInfo();
 void getUserName();
+void getNetstat();
 
 //Uses GetComputerNameEX API to gather the FQDN, Hostname and Domain Name from the system
 void getSysName()
@@ -450,6 +458,112 @@ void getNetworkInfo()
 	//free the object when done
 	if (pAdapterInfo)
 		free(pAdapterInfo);
+};
+
+//displays the netstat information for the host using the GetExtendedTCPTable API. This function gets the 
+void getNetstat()
+{
+	std::cout << std::endl << "[+] Active Connections" << std::endl << std::endl;
+	std::cout << std::setw(10) << std::internal << "  Proto" << std::setw(25) << "Local Address" << std::setw(25) << "Foreign Address" << std::setw(15) << "State" << std::setw(10) << "PID" << std::endl;
+	PMIB_TCPTABLE_OWNER_PID pTCPtable;			//a pointer to the table that holds all of the network connections
+	PMIB_TCPROW_OWNER_PID pTCProw;				//a pointer to a specific row in the table
+	DWORD size = 0;									//the size of the table (number of entries)
+	DWORD dwResult = 0;							//holds error code results
 
 
+
+	pTCPtable = (MIB_TCPTABLE_OWNER_PID *)malloc(sizeof(MIB_TCPTABLE_OWNER_PID));		//allocating memory for the table pointer
+	pTCProw = (MIB_TCPROW_OWNER_PID *)malloc(sizeof(MIB_TCPTABLE_OWNER_PID));			//allocating memory for the row pointer
+	size = sizeof(MIB_TCPROW_OWNER_PID);												//setting the initial size - this will be modified on the first function call
+
+	if (pTCPtable == NULL) 
+	{
+		printf("Error allocating memory\n");
+		return;
+	}
+
+	//much like the network adapter function we will need to call the API twice - once to get the actual size of the table (since all we can do right now is guess) and then the second
+	//time to actually get the table filled out. 
+	if (GetExtendedTcpTable(pTCPtable, &size, TRUE, AF_INET, TCP_TABLE_OWNER_PID_ALL, 0) == ERROR_INSUFFICIENT_BUFFER)
+	{
+		free(pTCPtable);				//free the memory for the table 
+		pTCPtable = (MIB_TCPTABLE_OWNER_PID *)malloc(size);				//reallocate the memory for the table to the correct size
+		if (pTCPtable == NULL)				//make sure the memory was allocated properly
+		{
+			printf("Error allocating memory\n");
+			return;
+		}
+	}
+	dwResult = GetExtendedTcpTable(pTCPtable, &size, TRUE, AF_INET, TCP_TABLE_OWNER_PID_ALL, 0);			//second call to the API and store the results ina  variable for error checking
+	if (dwResult != NO_ERROR)		//if there was an error then return and dont go any further!!
+	{
+		std::cout << "There was an error getting the Extended TCP Table" << std::endl;
+		return;
+	}
+
+	//loop through all the rows in the table, on each row output the data NOTE - THIS WILL NEED TO BE CLEANED UP TO BETTER OUTPUT THE DATA (it looks weird right now)
+	for (DWORD dwCounter = 0; dwCounter < pTCPtable->dwNumEntries; dwCounter++)
+	{
+		pTCProw = &pTCPtable->table[dwCounter];			//sets the tcprow to the current row
+
+		char localAddrStr[INET_ADDRSTRLEN];				//a string to store the local address
+		char remoteAddrStr[INET_ADDRSTRLEN];			//a string to store the remote address
+
+		InetNtop(AF_INET, &pTCProw->dwLocalAddr, (PSTR)localAddrStr, sizeof(localAddrStr));				//this function converts the binary remote address to a string so it is human readable
+		InetNtop(AF_INET, &pTCProw->dwRemoteAddr, (PSTR)remoteAddrStr, sizeof(remoteAddrStr));
+
+		std::cout << std::setw(10) << "  TCP";				//print TCP
+		std::cout << std::setw(25) << localAddrStr << ":" << ntohs((u_short)pTCProw->dwLocalPort);			//the last function in this converts the port to human readable format (from binary value)
+		std::cout << std::setw(25) << remoteAddrStr << ":" << ntohs((u_short)pTCProw->dwRemotePort);
+
+		//checks all the different possible states and prints the wording for that state
+		switch (pTCProw->dwState) {
+		case MIB_TCP_STATE_CLOSED:
+			std::cout << std::setw(15) << "CLOSED\t";
+			break;
+		case MIB_TCP_STATE_LISTEN:
+			std::cout << std::setw(15) << "LISTEN\t";
+			break;
+		case MIB_TCP_STATE_SYN_SENT:
+			std::cout << std::setw(15) << "SYN-SENT\t";
+			break;
+		case MIB_TCP_STATE_SYN_RCVD:
+			std::cout << std::setw(15) << "SYN-RECEIVED\t";
+			break;
+		case MIB_TCP_STATE_ESTAB:
+			std::cout << std::setw(15) << "ESTABLISHED\t";
+			break;
+		case MIB_TCP_STATE_FIN_WAIT1:
+			std::cout << std::setw(15) << "FIN-WAIT-1\t";
+			break;
+		case MIB_TCP_STATE_FIN_WAIT2:
+			std::cout << std::setw(15) << "FIN-WAIT-2 \t";
+			break;
+		case MIB_TCP_STATE_CLOSE_WAIT:
+			std::cout << std::setw(15) << "CLOSE-WAIT\t";
+			break;
+		case MIB_TCP_STATE_CLOSING:
+			std::cout << std::setw(15) << "CLOSING\t";
+			break;
+		case MIB_TCP_STATE_LAST_ACK:
+			std::cout << std::setw(15) << "LAST-ACK\t";
+			break;
+		case MIB_TCP_STATE_TIME_WAIT:
+			std::cout << std::setw(15) << "TIME-WAIT\t";
+			break;
+		case MIB_TCP_STATE_DELETE_TCB:
+			std::cout << std::setw(15) << "DELETE-TCB\t";
+			break;
+		default:
+			std::cout << std::setw(15) << "UNKNOWN dwState value\t";
+			break;
+		}
+		//print the PID
+		std::cout << std::setw(10) << pTCProw->dwOwningPid << std::endl;
+	}
+	//free the memory for the pointers and ge on your way!!!
+	pTCProw = NULL;
+	free(pTCProw);
+	free(pTCPtable);
+	
 }
