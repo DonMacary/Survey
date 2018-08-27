@@ -35,7 +35,7 @@ void getNetworkInfo();
 void getUserName();
 int getAccountInfo(int argc, wchar_t * argv[]);
 
-const wchar_t* userName[100];
+wchar_t userName[];
 
 
 //Uses GetComputerNameEX API to gather the FQDN, Hostname and Domain Name from the system
@@ -407,10 +407,7 @@ void getUserName()
 	std::string user = buffer;
 
 	std::cout << "NameSamCompatible: " << buffer << std::endl;
-	for (int i = 0; i < 100; i++)
-	{
-		userName[i] = *user.c_str();
-	}
+	MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, buffer, -1, userName, 100);
 
 };
 
