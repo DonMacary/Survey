@@ -1,7 +1,12 @@
 #pragma once
 #pragma comment(lib, "Secur32.lib")
+#pragma comment(lib, "iphlpapi.lib")
 #define SECURITY_WIN32
-#define _WIN32_WINNT 0x0500
+//#define _WIN32_WINNT 0x0500
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+
 
 #include <windows.h>
 #include <stdio.h>
@@ -10,6 +15,7 @@
 #include <iostream>
 #include <VersionHelpers.h>
 #include <security.h>
+#include <iphlpapi.h>
 
 void getSysName();
 void getOSInfo();
@@ -18,6 +24,7 @@ void getWindowsPath();
 void getSystemPath();
 void getTime();
 void getSystemInfo();
+void getNetworkInfo();
 void getUserName();
 
 //Uses GetComputerNameEX API to gather the FQDN, Hostname and Domain Name from the system
@@ -45,7 +52,7 @@ void getSysName()
 	{
 		std::cout << "Hostname: " << buffer << std::endl;		//prints it out
 	}
-	
+
 	ZeroMemory(buffer, dwSize);				 //empty the string  and the size
 
 	if (!GetComputerNameEx(ComputerNameDnsDomain, buffer, &dwSize))		//grabs the domain name
@@ -56,7 +63,7 @@ void getSysName()
 	{
 		std::cout << "Domain Name: " << buffer << std::endl;	//prints it out
 	}
-	
+
 	ZeroMemory(buffer, dwSize);				 //empty the string  and the size
 
 };
@@ -280,24 +287,24 @@ void getArchitecture()
 	//https://msdn.microsoft.com/en-us/library/windows/desktop/ms724958(v=vs.85).aspx 
 	switch (sys.wProcessorArchitecture)
 	{
-		case 0:
-			std::cout << "x86" << std::endl;
-			break;
-		case 5:
-			std::cout << "ARM" << std::endl;
-			break;
-		case 6:
-			std::cout << "Intel Itanium-based" << std::endl;
-			break;
-		case 9:
-			std::cout << "x64" << std::endl;
-			break;
-		case 12:
-			std::cout << "ARM64" << std::endl;
-			break;
-		default:
-			std::cout << "Unknown" << std::endl;
-			break;
+	case 0:
+		std::cout << "x86" << std::endl;
+		break;
+	case 5:
+		std::cout << "ARM" << std::endl;
+		break;
+	case 6:
+		std::cout << "Intel Itanium-based" << std::endl;
+		break;
+	case 9:
+		std::cout << "x64" << std::endl;
+		break;
+	case 12:
+		std::cout << "ARM64" << std::endl;
+		break;
+	default:
+		std::cout << "Unknown" << std::endl;
+		break;
 	}
 
 };
@@ -310,7 +317,7 @@ void getWindowsPath()
 	DWORD size = sizeof(PATH);		//size of the path variable 
 	UINT results = GetWindowsDirectory(PATH, size);		//stores the path in the variable and the sresult of the function is an int which means various things
 
-	//if the result int is = 0 then the GetWindowsDirectory API failed
+														//if the result int is = 0 then the GetWindowsDirectory API failed
 	if (results == 0)
 	{
 		std::cout << "Windows Directory Path: Failed to find" << std::endl;
@@ -333,7 +340,7 @@ void getSystemPath()
 	TCHAR PATH[256] = TEXT("");		//variable to store the path
 	DWORD size = sizeof(PATH);		//size of the path variable 
 	UINT results = GetSystemDirectory(PATH, size);		//stores the path in the variable and the sresult of the function is an int which means various things
-												//if the result int is = 0 then the GetWindowsDirectory API failed
+														//if the result int is = 0 then the GetWindowsDirectory API failed
 	if (results == 0)
 	{
 		std::cout << "Windows System Path: Failed to find" << std::endl;
@@ -379,7 +386,7 @@ void getSystemInfo()
 
 };
 
-//gets the username of the currently logged in user
+//gets the username of the currently logged in user using the GetUserNameEx API
 void getUserName()
 {
 	TCHAR buffer[256] = TEXT("");
@@ -391,4 +398,58 @@ void getUserName()
 
 };
 
+//reports information about the network adapters on the host machine using the GetAdaptersInfo API. 
+void getNetworkInfo()
+{
+	std::cout << std::endl << "[+] Network Adapters" << std::endl << std::endl;
 
+	IP_ADAPTER_INFO  *pAdapterInfo;				//pointer to a adapter info 
+	ULONG            ulOutBufLen;				//buffer for input parameter
+	DWORD            dwRetVal;					//error checking variable
+
+
+	pAdapterInfo = (IP_ADAPTER_INFO *)malloc(sizeof(IP_ADAPTER_INFO));		//allocating memory for the pointer
+	ulOutBufLen = sizeof(IP_ADAPTER_INFO);									//declare the size of the buffer as the size of the adapter info pointer
+
+
+	//initial GetAdapterInfo call with error checking - This call to the function is meant to fail, 
+	//and is used to ensure that the ulOutBufLen variable specifies a size sufficient for holding all the information returned to pAdapterInfo
+	if (GetAdaptersInfo(pAdapterInfo, &ulOutBufLen) != ERROR_SUCCESS) 
+	{
+		free(pAdapterInfo);		//free up the pointer so we can make the call again
+		pAdapterInfo = (IP_ADAPTER_INFO *)malloc(ulOutBufLen);			//correctly initialize the size of the pointer based off the size of the buffer from the initial call
+	}
+
+	//now that we have the right size of the adapter pointer we call the function again and store the result in dwRetVal. We do an initial error check to make sure the function 
+	//call went through and print if it failed.
+	if ((dwRetVal = GetAdaptersInfo(pAdapterInfo, &ulOutBufLen)) != ERROR_SUCCESS) 
+	{
+		std::cout << "GetAdaptersInfo call failed with " << dwRetVal << std::endl;
+	}
+
+	//store the adapter information in a PIP_ADAPTER_INFO object, this is essentially an array that stores all the adapters. We will iterate through this array and 
+	//print each adpaters information
+	PIP_ADAPTER_INFO pAdapter = pAdapterInfo;
+	while (pAdapter) {
+		std::cout << "Adapter Name: " << pAdapter->Description << std::endl;			//displays thhe network adapter name
+		std::cout << "\tIP Address: " << pAdapter->IpAddressList.IpAddress.String << std::endl;		//displays the ip address
+		std::cout << "\tIP Mask: " << pAdapter->IpAddressList.IpMask.String << std::endl;			//displays the subnet mask
+		std::cout << "\tGateway: " << pAdapter->GatewayList.IpAddress.String <<std::endl;			//displays the gateway
+		//checks if dhcp is enabled, if so state so and if it can find the dhcp server address, report it.
+		if (pAdapter->DhcpEnabled)
+		{	
+			std::cout << "\tDHCP Enabled: Yes" << std::endl;
+			std::cout << "\t\tDHCP Server: \t" << pAdapter->DhcpServer.IpAddress.String << std::endl;
+		}
+		else
+			std::cout << "\tDHCP Enabled: No" << std::endl;
+
+		pAdapter = pAdapter->Next;	//move to the next adapter in the array
+	}
+
+	//free the object when done
+	if (pAdapterInfo)
+		free(pAdapterInfo);
+
+
+}

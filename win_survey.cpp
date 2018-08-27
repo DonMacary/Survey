@@ -28,6 +28,7 @@ int main(void)
 {
 	getSystemInfo();
 	getUserName();
+	getNetworkInfo();
 
 	getchar();
 	getchar();
