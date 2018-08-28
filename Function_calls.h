@@ -6,6 +6,8 @@
 //#define _WIN32_WINNT 0x0500
 
 #define WIN32_LEAN_AND_MEAN
+#define MALLOC(x) HeapAlloc(GetProcessHeap(), 0, (x))
+#define FREE(x) HeapFree(GetProcessHeap(), 0, (x))
 
 #undef _WINSOCKAPI_
 #define _WINSOCKAPI_
@@ -34,6 +36,8 @@ void getSystemInfo();
 void getNetworkInfo();
 void getUserName();
 void getNetstat();
+void getRoutes();
+
 
 //Uses GetComputerNameEX API to gather the FQDN, Hostname and Domain Name from the system
 void getSysName()
@@ -443,6 +447,7 @@ void getNetworkInfo()
 		std::cout << "\tIP Address: " << pAdapter->IpAddressList.IpAddress.String << std::endl;		//displays the ip address
 		std::cout << "\tIP Mask: " << pAdapter->IpAddressList.IpMask.String << std::endl;			//displays the subnet mask
 		std::cout << "\tGateway: " << pAdapter->GatewayList.IpAddress.String <<std::endl;			//displays the gateway
+		std::cout << "\tIndex: " << pAdapter->Index << std::endl;
 		//checks if dhcp is enabled, if so state so and if it can find the dhcp server address, report it.
 		if (pAdapter->DhcpEnabled)
 		{	
@@ -463,8 +468,9 @@ void getNetworkInfo()
 //displays the netstat information for the host using the GetExtendedTCPTable API. This function gets the 
 void getNetstat()
 {
+	std::cout << std::internal;
 	std::cout << std::endl << "[+] Active Connections" << std::endl << std::endl;
-	std::cout << std::setw(10) << std::internal << "  Proto" << std::setw(25) << "Local Address" << std::setw(25) << "Foreign Address" << std::setw(15) << "State" << std::setw(10) << "PID" << std::endl;
+	std::cout << std::setw(10)  << "  Proto" << std::setw(25) << "Local Address" << std::setw(35) << "Foreign Address" << std::setw(15) << "State" << std::setw(20) << "PID" << std::endl;
 	PMIB_TCPTABLE_OWNER_PID pTCPtable;			//a pointer to the table that holds all of the network connections
 	PMIB_TCPROW_OWNER_PID pTCProw;				//a pointer to a specific row in the table
 	DWORD size = 0;									//the size of the table (number of entries)
@@ -511,6 +517,7 @@ void getNetstat()
 
 		InetNtop(AF_INET, &pTCProw->dwLocalAddr, (PSTR)localAddrStr, sizeof(localAddrStr));				//this function converts the binary remote address to a string so it is human readable
 		InetNtop(AF_INET, &pTCProw->dwRemoteAddr, (PSTR)remoteAddrStr, sizeof(remoteAddrStr));
+		
 
 		std::cout << std::setw(10) << "  TCP";				//print TCP
 		std::cout << std::setw(25) << localAddrStr << ":" << ntohs((u_short)pTCProw->dwLocalPort);			//the last function in this converts the port to human readable format (from binary value)
@@ -519,43 +526,43 @@ void getNetstat()
 		//checks all the different possible states and prints the wording for that state
 		switch (pTCProw->dwState) {
 		case MIB_TCP_STATE_CLOSED:
-			std::cout << std::setw(15) << "CLOSED\t";
+			std::cout << std::setw(20) << "CLOSED\t";
 			break;
 		case MIB_TCP_STATE_LISTEN:
-			std::cout << std::setw(15) << "LISTEN\t";
+			std::cout << std::setw(20) << "LISTEN\t";
 			break;
 		case MIB_TCP_STATE_SYN_SENT:
-			std::cout << std::setw(15) << "SYN-SENT\t";
+			std::cout << std::setw(20) << "SYN-SENT\t";
 			break;
 		case MIB_TCP_STATE_SYN_RCVD:
-			std::cout << std::setw(15) << "SYN-RECEIVED\t";
+			std::cout << std::setw(20) << "SYN-RECEIVED\t";
 			break;
 		case MIB_TCP_STATE_ESTAB:
-			std::cout << std::setw(15) << "ESTABLISHED\t";
+			std::cout << std::setw(20) << "ESTABLISHED\t";
 			break;
 		case MIB_TCP_STATE_FIN_WAIT1:
-			std::cout << std::setw(15) << "FIN-WAIT-1\t";
+			std::cout << std::setw(20) << "FIN-WAIT-1\t";
 			break;
 		case MIB_TCP_STATE_FIN_WAIT2:
-			std::cout << std::setw(15) << "FIN-WAIT-2 \t";
+			std::cout << std::setw(20) << "FIN-WAIT-2 \t";
 			break;
 		case MIB_TCP_STATE_CLOSE_WAIT:
-			std::cout << std::setw(15) << "CLOSE-WAIT\t";
+			std::cout << std::setw(20) << "CLOSE-WAIT\t";
 			break;
 		case MIB_TCP_STATE_CLOSING:
-			std::cout << std::setw(15) << "CLOSING\t";
+			std::cout << std::setw(20) << "CLOSING\t";
 			break;
 		case MIB_TCP_STATE_LAST_ACK:
-			std::cout << std::setw(15) << "LAST-ACK\t";
+			std::cout << std::setw(20) << "LAST-ACK\t";
 			break;
 		case MIB_TCP_STATE_TIME_WAIT:
-			std::cout << std::setw(15) << "TIME-WAIT\t";
+			std::cout << std::setw(20) << "TIME-WAIT\t";
 			break;
 		case MIB_TCP_STATE_DELETE_TCB:
-			std::cout << std::setw(15) << "DELETE-TCB\t";
+			std::cout << std::setw(20) << "DELETE-TCB\t";
 			break;
 		default:
-			std::cout << std::setw(15) << "UNKNOWN dwState value\t";
+			std::cout << std::setw(20) << "UNKNOWN dwState value\t";
 			break;
 		}
 		//print the PID
@@ -566,4 +573,157 @@ void getNetstat()
 	free(pTCProw);
 	free(pTCPtable);
 	
-}
+}; 
+
+void getRoutes()
+{
+
+	std::cout <<std::endl << "[+] Routes" << std::endl << std::endl;
+	std::cout << std::left;
+	std::cout << std::setw(25) << "Network Destination" << std::setw(25) << "Netmask" << std::setw(25) << "Gateway" <<std::setw(25) << "Interface" << std::setw(25) << "Metric" << std::endl;
+	// Declare and initialize variables.
+
+	/* variables used for GetIfForwardTable */
+	PMIB_IPFORWARDTABLE pIpForwardTable;
+	PMIB_IPFORWARDROW pIpForwardRow;
+	DWORD dwSize = 0;
+	DWORD dwRetVal = 0;
+
+	struct in_addr IpAddr;
+
+	int i;
+
+	pIpForwardTable = (MIB_IPFORWARDTABLE *)malloc(sizeof(MIB_IPFORWARDTABLE));
+	pIpForwardRow = (MIB_IPFORWARDROW *)malloc(sizeof(MIB_IPFORWARDROW));
+
+	if (pIpForwardTable == NULL) 
+	{
+		printf("Error allocating memory\n");
+		return;
+	}
+
+	if (GetIpForwardTable(pIpForwardTable, &dwSize, 0) == ERROR_INSUFFICIENT_BUFFER) 
+	{
+		free(pIpForwardTable);
+		pIpForwardTable = (MIB_IPFORWARDTABLE *)malloc(dwSize);
+
+		if (pIpForwardTable == NULL) 
+		{
+			printf("Error allocating memory\n");
+			return;
+		}
+	}
+
+	/* Note that the IPv4 addresses returned in
+	* GetIpForwardTable entries are in network byte order
+	*/
+	if ((dwRetVal = GetIpForwardTable(pIpForwardTable, &dwSize, 0)) == NO_ERROR) 
+	{
+		for (i = 0; i < (int)pIpForwardTable->dwNumEntries; i++) {
+
+			pIpForwardRow = &pIpForwardTable->table[i];
+
+			char destIP[INET_ADDRSTRLEN];				//a string to store the destination address
+			char maskIP[INET_ADDRSTRLEN];			//a string to store the mask IP
+			char gatewayIP[INET_ADDRSTRLEN];
+			char interfaceIP[INET_ADDRSTRLEN];
+
+			InetNtop(AF_INET, &pIpForwardRow->dwForwardDest, (PSTR)destIP, sizeof(destIP));
+			InetNtop(AF_INET, &pIpForwardRow->dwForwardMask, (PSTR)maskIP, sizeof(maskIP));
+			InetNtop(AF_INET, &pIpForwardRow->dwForwardNextHop, (PSTR)gatewayIP, sizeof(gatewayIP));
+			
+
+			std::cout << std::setw(25) << destIP;
+			std::cout << std::setw(25) << maskIP;
+			if (i == 0)
+			{
+				std::cout << std::setw(25) << gatewayIP;
+				std::cout << std::setw(25) << pIpForwardRow->dwForwardIfIndex;
+			}
+			else
+			{
+				std::cout << std::setw(25) << "On-link" << std::setw(25) << gatewayIP;
+			}
+			std::cout << std::setw(25) << pIpForwardRow->dwForwardMetric1 << std::endl;
+
+
+			/*
+			//Windows has the ability to determine the protocol that was used to create the route. I feel like this could be very useful in the future knowing this information, however,
+			//This is not an inteded feature of the current project and due to time contraints I am not going to play around with this info.
+			printf("\tRoute[%d] Proto: %ld - ", i,
+				pIpForwardTable->table[i].dwForwardProto);
+			switch (pIpForwardTable->table[i].dwForwardProto) {
+			case MIB_IPPROTO_OTHER:
+				printf("other\n");
+				break;
+			case MIB_IPPROTO_LOCAL:
+				printf("local interface\n");
+				break;
+			case MIB_IPPROTO_NETMGMT:
+				printf("static route set through network management \n");
+				break;
+			case MIB_IPPROTO_ICMP:
+				printf("result of ICMP redirect\n");
+				break;
+			case MIB_IPPROTO_EGP:
+				printf("Exterior Gateway Protocol (EGP)\n");
+				break;
+			case MIB_IPPROTO_GGP:
+				printf("Gateway-to-Gateway Protocol (GGP)\n");
+				break;
+			case MIB_IPPROTO_HELLO:
+				printf("Hello protocol\n");
+				break;
+			case MIB_IPPROTO_RIP:
+				printf("Routing Information Protocol (RIP)\n");
+				break;
+			case MIB_IPPROTO_IS_IS:
+				printf
+				("Intermediate System-to-Intermediate System (IS-IS) protocol\n");
+				break;
+			case MIB_IPPROTO_ES_IS:
+				printf("End System-to-Intermediate System (ES-IS) protocol\n");
+				break;
+			case MIB_IPPROTO_CISCO:
+				printf("Cisco Interior Gateway Routing Protocol (IGRP)\n");
+				break;
+			case MIB_IPPROTO_BBN:
+				printf("BBN Internet Gateway Protocol (IGP) using SPF\n");
+				break;
+			case MIB_IPPROTO_OSPF:
+				printf("Open Shortest Path First (OSPF) protocol\n");
+				break;
+			case MIB_IPPROTO_BGP:
+				printf("Border Gateway Protocol (BGP)\n");
+				break;
+			case MIB_IPPROTO_NT_AUTOSTATIC:
+				printf("special Windows auto static route\n");
+				break;
+			case MIB_IPPROTO_NT_STATIC:
+				printf("special Windows static route\n");
+				break;
+			case MIB_IPPROTO_NT_STATIC_NON_DOD:
+				printf
+				("special Windows static route not based on Internet standards\n");
+				break;
+			default:
+				printf("UNKNOWN Proto value\n");
+				break;
+			}
+			*/
+		}
+		pIpForwardRow = NULL;
+		free(pIpForwardTable);
+		free(pIpForwardRow);
+		return;
+	}
+	else {
+		printf("\tGetIpForwardTable failed.\n");
+		pIpForwardRow = NULL;
+		free(pIpForwardTable);
+		free(pIpForwardRow);
+		return;
+	}
+};
+
+
