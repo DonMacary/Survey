@@ -1,5 +1,5 @@
 # **Windows Survey**
-This program is intended to be a windows post-exploitation tool to scout the target Windows operating system via API calls. The program will gather the information from the operating system and will output it to a google protobuff for an easy to read format.
+This program is intended to be a windows post-exploitation tool to scout the target Windows operating system via API calls. The program will gather the information from the operating system and will output it to a file (eventually using google protobuff for easily transferable data)
 
 **Proposed project timeline:** (remove from final)
 
@@ -15,6 +15,7 @@ This program is intended to be a windows post-exploitation tool to scout the tar
 	getNetworkInfo();
 	getNetstat();
 	getRoutes();
+    getProcesses();
 
 OPTIONAL
     get-lastlogin
@@ -59,10 +60,15 @@ getRoutes()
 
     getRoutes() will report any routes the host has.
 
+getMemoryInfo();
+    gets info on the computer's memory.
+
+getProcesses();
+	get-procceses will report the running proccesses on the host. Further implementations will only gather processes created in the last hour, processes without a service etc...
+
 OPTIONAL FUNCTIONS
 get-lastlogin
 
     get-lastlogin will get information about the last logged on user
 
-
-Obviously this has the potential to be a lot of data. I would like to add functionality to format the output file to cleanly organize the host information for analysis. Possible output to csv for import into excel with separate pages for each function.      
+    
