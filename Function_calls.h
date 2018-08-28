@@ -1,13 +1,20 @@
 #pragma once
 #pragma comment(lib, "Secur32.lib")
 #pragma comment(lib, "iphlpapi.lib")
+#pragma comment(lib, "advapi32.lib")
+#pragma comment(lib, "netapi32.lib")
 #pragma comment(lib, "Ws2_32.lib")
+#pragma comment(lib, "user32.lib")
 #define SECURITY_WIN32
 //#define _WIN32_WINNT 0x0500
+
 
 #define WIN32_LEAN_AND_MEAN
 #define MALLOC(x) HeapAlloc(GetProcessHeap(), 0, (x))
 #define FREE(x) HeapFree(GetProcessHeap(), 0, (x))
+#define DIV 1073741824
+
+
 
 #undef _WINSOCKAPI_
 #define _WINSOCKAPI_
@@ -22,12 +29,13 @@
 #include <VersionHelpers.h>
 #include <security.h>
 #include <iphlpapi.h>
+#include <assert.h>
+#include <LM.h>
+#include <sddl.h>
 #include <Iprtrmib.h>
 #include <psapi.h>
 #include <tlhelp32.h>
 #include <tchar.h>
-
-
 
 void getSysName();
 void getOSInfo();
@@ -40,8 +48,9 @@ void getNetworkInfo();
 void getUserName();
 void getNetstat();
 void getRoutes();
+void getMemoryInfo();
 void getProcesses();
-BOOL GetProcessList();
+
 
 
 //Uses GetComputerNameEX API to gather the FQDN, Hostname and Domain Name from the system
@@ -406,13 +415,18 @@ void getSystemInfo()
 //gets the username of the currently logged in user using the GetUserNameEx API
 void getUserName()
 {
+	std::cout << std::endl << "[+] User Name" << std::endl << std::endl;
 	TCHAR buffer[256] = TEXT("");
 	DWORD buffer_size = sizeof(buffer);
 	LPDWORD nSize = &buffer_size;
 	GetUserNameEx(NameSamCompatible, buffer, nSize);
+	std::string user = buffer;
 
 	std::cout << "NameSamCompatible: " << buffer << std::endl;
-
+	//the below portion goes with getAccountInfo. Since that is currently on hold, the following code has been commented out.
+	/*LPWSTR userName = {0};
+	MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, buffer, -1, userName, 256);
+	getAccountInfo(userName);*/
 };
 
 //reports information about the network adapters on the host machine using the GetAdaptersInfo API. 
@@ -452,7 +466,6 @@ void getNetworkInfo()
 		std::cout << "\tIP Address: " << pAdapter->IpAddressList.IpAddress.String << std::endl;		//displays the ip address
 		std::cout << "\tIP Mask: " << pAdapter->IpAddressList.IpMask.String << std::endl;			//displays the subnet mask
 		std::cout << "\tGateway: " << pAdapter->GatewayList.IpAddress.String <<std::endl;			//displays the gateway
-		std::cout << "\tIndex: " << pAdapter->Index << std::endl;
 		//checks if dhcp is enabled, if so state so and if it can find the dhcp server address, report it.
 		if (pAdapter->DhcpEnabled)
 		{	
@@ -468,14 +481,16 @@ void getNetworkInfo()
 	//free the object when done
 	if (pAdapterInfo)
 		free(pAdapterInfo);
-};
+
+
+}
 
 //displays the netstat information for the host using the GetExtendedTCPTable API. This function gets the 
 void getNetstat()
 {
 	std::cout << std::internal;
 	std::cout << std::endl << "[+] Active Connections" << std::endl << std::endl;
-	std::cout << std::setw(10)  << "  Proto" << std::setw(25) << "Local Address" << std::setw(35) << "Foreign Address" << std::setw(15) << "State" << std::setw(20) << "PID" << std::endl;
+	std::cout << std::setw(10) << "  Proto" << std::setw(25) << "Local Address" << std::setw(35) << "Foreign Address" << std::setw(15) << "State" << std::setw(20) << "PID" << std::endl;
 	PMIB_TCPTABLE_OWNER_PID pTCPtable;			//a pointer to the table that holds all of the network connections
 	PMIB_TCPROW_OWNER_PID pTCProw;				//a pointer to a specific row in the table
 	DWORD size = 0;									//the size of the table (number of entries)
@@ -487,7 +502,7 @@ void getNetstat()
 	pTCProw = (MIB_TCPROW_OWNER_PID *)malloc(sizeof(MIB_TCPTABLE_OWNER_PID));			//allocating memory for the row pointer
 	size = sizeof(MIB_TCPROW_OWNER_PID);												//setting the initial size - this will be modified on the first function call
 
-	if (pTCPtable == NULL) 
+	if (pTCPtable == NULL)
 	{
 		printf("Error allocating memory\n");
 		return;
@@ -522,7 +537,7 @@ void getNetstat()
 
 		InetNtop(AF_INET, &pTCProw->dwLocalAddr, (PSTR)localAddrStr, sizeof(localAddrStr));				//this function converts the binary remote address to a string so it is human readable
 		InetNtop(AF_INET, &pTCProw->dwRemoteAddr, (PSTR)remoteAddrStr, sizeof(remoteAddrStr));
-		
+
 
 		std::cout << std::setw(10) << "  TCP";				//print TCP
 		std::cout << std::setw(25) << localAddrStr << ":" << ntohs((u_short)pTCProw->dwLocalPort);			//the last function in this converts the port to human readable format (from binary value)
@@ -577,16 +592,17 @@ void getNetstat()
 	pTCProw = NULL;
 	free(pTCProw);
 	free(pTCPtable);
-	
-}; 
+
+};
 
 //Uses the GetIpForwardTable API to get information about the hosts routes
 void getRoutes()
 {
+
 	//print the header
 	std::cout <<std::endl << "[+] Routes" << std::endl << std::endl;
 	std::cout << std::left;
-	std::cout << std::setw(25) << "Network Destination" << std::setw(25) << "Netmask" << std::setw(25) << "Gateway" <<std::setw(25) << "Interface" << std::setw(25) << "Metric" << std::endl;
+	std::cout << std::setw(25) << "Network Destination" << std::setw(25) << "Netmask" << std::setw(25) << "Gateway" << std::setw(25) << "Interface" << std::setw(25) << "Metric" << std::endl;
 	// Declare and initialize variables.
 
 	/* variables used for GetIfForwardTable */
@@ -604,6 +620,7 @@ void getRoutes()
 		printf("Error allocating memory\n");
 		return;
 	}
+
 	//calls the API but we expect that it will fail since our size isnt big enough - this will put the correct size into the dwSize variable
 	if (GetIpForwardTable(pIpForwardTable, &dwSize, 0) == ERROR_INSUFFICIENT_BUFFER) 
 	{
@@ -635,7 +652,7 @@ void getRoutes()
 			InetNtop(AF_INET, &pIpForwardRow->dwForwardDest, (PSTR)destIP, sizeof(destIP));
 			InetNtop(AF_INET, &pIpForwardRow->dwForwardMask, (PSTR)maskIP, sizeof(maskIP));
 			InetNtop(AF_INET, &pIpForwardRow->dwForwardNextHop, (PSTR)gatewayIP, sizeof(gatewayIP));
-			
+
 			//print the destIP and Mask
 			std::cout << std::setw(25) << destIP;
 			std::cout << std::setw(25) << maskIP;
@@ -658,64 +675,64 @@ void getRoutes()
 			//Windows has the ability to determine the protocol that was used to create the route. I feel like this could be very useful in the future knowing this information, however,
 			//This is not an inteded feature of the current project and due to time contraints I am not going to play around with this info.
 			printf("\tRoute[%d] Proto: %ld - ", i,
-				pIpForwardTable->table[i].dwForwardProto);
+			pIpForwardTable->table[i].dwForwardProto);
 			switch (pIpForwardTable->table[i].dwForwardProto) {
 			case MIB_IPPROTO_OTHER:
-				printf("other\n");
-				break;
+			printf("other\n");
+			break;
 			case MIB_IPPROTO_LOCAL:
-				printf("local interface\n");
-				break;
+			printf("local interface\n");
+			break;
 			case MIB_IPPROTO_NETMGMT:
-				printf("static route set through network management \n");
-				break;
+			printf("static route set through network management \n");
+			break;
 			case MIB_IPPROTO_ICMP:
-				printf("result of ICMP redirect\n");
-				break;
+			printf("result of ICMP redirect\n");
+			break;
 			case MIB_IPPROTO_EGP:
-				printf("Exterior Gateway Protocol (EGP)\n");
-				break;
+			printf("Exterior Gateway Protocol (EGP)\n");
+			break;
 			case MIB_IPPROTO_GGP:
-				printf("Gateway-to-Gateway Protocol (GGP)\n");
-				break;
+			printf("Gateway-to-Gateway Protocol (GGP)\n");
+			break;
 			case MIB_IPPROTO_HELLO:
-				printf("Hello protocol\n");
-				break;
+			printf("Hello protocol\n");
+			break;
 			case MIB_IPPROTO_RIP:
-				printf("Routing Information Protocol (RIP)\n");
-				break;
+			printf("Routing Information Protocol (RIP)\n");
+			break;
 			case MIB_IPPROTO_IS_IS:
-				printf
-				("Intermediate System-to-Intermediate System (IS-IS) protocol\n");
-				break;
+			printf
+			("Intermediate System-to-Intermediate System (IS-IS) protocol\n");
+			break;
 			case MIB_IPPROTO_ES_IS:
-				printf("End System-to-Intermediate System (ES-IS) protocol\n");
-				break;
+			printf("End System-to-Intermediate System (ES-IS) protocol\n");
+			break;
 			case MIB_IPPROTO_CISCO:
-				printf("Cisco Interior Gateway Routing Protocol (IGRP)\n");
-				break;
+			printf("Cisco Interior Gateway Routing Protocol (IGRP)\n");
+			break;
 			case MIB_IPPROTO_BBN:
-				printf("BBN Internet Gateway Protocol (IGP) using SPF\n");
-				break;
+			printf("BBN Internet Gateway Protocol (IGP) using SPF\n");
+			break;
 			case MIB_IPPROTO_OSPF:
-				printf("Open Shortest Path First (OSPF) protocol\n");
-				break;
+			printf("Open Shortest Path First (OSPF) protocol\n");
+			break;
 			case MIB_IPPROTO_BGP:
-				printf("Border Gateway Protocol (BGP)\n");
-				break;
+			printf("Border Gateway Protocol (BGP)\n");
+			break;
 			case MIB_IPPROTO_NT_AUTOSTATIC:
-				printf("special Windows auto static route\n");
-				break;
+			printf("special Windows auto static route\n");
+			break;
 			case MIB_IPPROTO_NT_STATIC:
-				printf("special Windows static route\n");
-				break;
+			printf("special Windows static route\n");
+			break;
 			case MIB_IPPROTO_NT_STATIC_NON_DOD:
-				printf
-				("special Windows static route not based on Internet standards\n");
-				break;
+			printf
+			("special Windows static route not based on Internet standards\n");
+			break;
 			default:
-				printf("UNKNOWN Proto value\n");
-				break;
+			printf("UNKNOWN Proto value\n");
+			break;
 			}
 			*/
 		}
@@ -732,6 +749,261 @@ void getRoutes()
 		return;
 	}
 };
+
+
+//gets info on the computer's memory.
+void getMemoryInfo()
+{
+	MEMORYSTATUSEX memStat;
+
+	memStat.dwLength = sizeof(memStat);
+
+	GlobalMemoryStatusEx(&memStat);
+	std::cout << std::endl << "[+] Memory" << std::endl << std::endl;
+	std::cout << "Memory in use: " << memStat.dwMemoryLoad << "%" << std::endl;
+	std::cout << "Total physical memory: " << memStat.ullTotalPhys / DIV  << "GB" << std::endl;
+	std::cout << "Available physical memory: " << memStat.ullAvailPhys / DIV  << "GB" << std::endl;
+	std::cout << "Total virtual memory: " << memStat.ullTotalVirtual / DIV << "GB" << std::endl;
+	std::cout << "Available virtual memeory: " << memStat.ullAvailVirtual / DIV  << "GB" << std::endl;
+};
+//gets the user accounts. This is a little more complicated than we expected. Due to time constraints, it is not implemented at this time.
+/*int getAccountInfo(LPWSTR userName)
+{
+	DWORD dwLevel = 0;
+	LPUSER_INFO_0 pBuf = NULL;
+	LPUSER_INFO_1 pBuf1 = NULL;
+	LPUSER_INFO_2 pBuf2 = NULL;
+	LPUSER_INFO_3 pBuf3 = NULL;
+	LPUSER_INFO_4 pBuf4 = NULL;
+	LPUSER_INFO_10 pBuf10 = NULL;
+	LPUSER_INFO_11 pBuf11 = NULL;
+	LPUSER_INFO_20 pBuf20 = NULL;
+	LPUSER_INFO_23 pBuf23 = NULL;
+
+	NET_API_STATUS nStatus;
+
+	LPTSTR sStringSid = NULL;
+
+	int i = 0;
+	int j = 0;
+
+	if (argc != 3)
+	{
+		std::cout << stderr << "Usage: " << userName << "\\\\ServerName UserName" << std::endl;
+		exit(1);
+	}
+
+	while (i < 24)
+	{
+		// Call the NetUserGetInfo function.
+
+		dwLevel = i;
+
+		std::cout << "\nCalling NetUserGetInfo with Username=" << userName << " Level=" << dwLevel << std::endl;
+		nStatus = NetUserGetInfo(NULL, userName, dwLevel, (LPBYTE *)&pBuf);
+		
+		// If the call succeeds, print the user information.
+		
+		if (nStatus == NERR_Success)
+		{
+			if (pBuf != NULL)
+			{
+
+				switch (i)
+				{
+				case 0:
+					std::cout << "User account name: " << pBuf->usri0_name << std::endl;
+					break;
+				case 1:
+					pBuf1 = (LPUSER_INFO_1)pBuf;
+					std::cout << "User account name: " << pBuf1->usri1_name << std::endl;
+					std::cout << "\tPassword: " << pBuf1->usri1_password << std::endl;
+					std::cout << "\tPassword age (seconds): " << pBuf1->usri1_password_age << std::endl;
+					std::cout << "\tPrivilege level: " << pBuf1->usri1_priv << std::endl;
+					std::cout << "\tHome directory: " << pBuf1->usri1_home_dir << std::endl;
+					std::cout << "\tUser comment: " << pBuf1->usri1_comment << std::endl;
+					std::cout << "\tFlags (in hex): " << pBuf1->usri1_flags << std::endl;
+					std::cout << "\tScript path: " << pBuf1->usri1_script_path << std::endl;
+					break;
+				case 2:
+					pBuf2 = (LPUSER_INFO_2)pBuf;
+					std::cout << "User account name: " << pBuf2->usri2_name << std::endl;
+					std::cout << "\tPassword: " << pBuf2->usri2_password << std::endl;
+					std::cout << "\tPassword age (seconds): " << pBuf2->usri2_password_age << std::endl;
+					std::cout << "\tPrivilege level: " << pBuf2->usri2_priv << std::endl;
+					std::cout << "\tHome directory: " << pBuf2->usri2_home_dir << std::endl;
+					std::cout << "\tComment: " << pBuf2->usri2_comment << std::endl;
+					std::cout << "\tFlags (in hex): " << pBuf2->usri2_flags << std::endl;
+					std::cout << "\tScript path: " << pBuf2->usri2_script_path << std::endl;
+					std::cout << "\tAuth flags (in hex): " << pBuf2->usri2_auth_flags << std::endl;
+					std::cout << "\tFull name: " << pBuf2->usri2_full_name << std::endl;
+					std::cout << "\tUser comment: " << pBuf2->usri2_usr_comment << std::endl;
+					std::cout << "\tParameters: " << pBuf2->usri2_parms << std::endl;
+					std::cout << "\tWorkstations: " << pBuf2->usri2_workstations << std::endl;
+					std::cout << "\tLast logon (seconds since January 1, 1970 GMT: " << pBuf2->usri2_last_logon << std::endl;
+					std::cout << "\tLast logoff (seconds since January 1, 1970 GMT): " << pBuf2->usri2_last_logoff << std::endl;
+					std::cout << "\tAccount expires (seconds since January 1, 1970 GMT): " << pBuf2->usri2_acct_expires << std::endl;
+					std::cout << "\tMax storage: " << pBuf2->usri2_max_storage << std::endl;
+					std::cout << "\tUnits per week: " << pBuf2->usri2_units_per_week << std::endl;
+					std::cout << "\tLogon hours: ";
+					for (j = 0; j < 21; j++)
+					{
+						std::cout << (BYTE)pBuf2->usri2_logon_hours[j];
+					}
+					std::cout << std::endl;
+					std::cout << "\tBad password count: " << pBuf2->usri2_bad_pw_count << std::endl;
+					std::cout << "\tNumber of logons: " << pBuf2->usri2_num_logons << std::endl;
+					std::cout << "\tLogon server: " << pBuf2->usri2_logon_server << std::endl;
+					std::cout << "\tCountry code: " << pBuf2->usri2_country_code << std::endl;
+					std::cout << "\tCode page: " << pBuf2->usri2_code_page << std::endl;
+					break;
+				case 4:
+					pBuf4 = (LPUSER_INFO_4)pBuf;
+					std::cout << "\tUser account name: " << pBuf4->usri4_name << std::endl;
+					std::cout << "\tPassword: " << pBuf4->usri4_password << std::endl;
+					std::cout << "\tPrivilege level: " << pBuf4->usri4_priv << std::endl;
+					std::cout << "\tHome directory: " << pBuf4->usri4_home_dir << std::endl;
+					std::cout << "\tComment: " << pBuf4->usri4_comment << std::endl;
+					std::cout << "\tFlags (in hex): " << pBuf4->usri4_flags << std::endl;
+					std::cout << "\tScript path: " << pBuf4->usri4_script_path << std::endl;
+					std::cout << "\tAuth flags (in hex): " << pBuf4->usri4_auth_flags << std::endl;
+					std::cout << "\tFull name: " << pBuf4->usri4_full_name << std::endl;
+					std::cout << "\tUser comment: " << pBuf4->usri4_usr_comment << std::endl;
+					std::cout << "\tParameters: " << pBuf4->usri4_parms << std::endl;
+					std::cout << "\tWorkstations: " << pBuf4->usri4_workstations << std::endl;
+					std::cout << "\tLast logon (seconds sinc January 1, 1970 GMT: " << pBuf4->usri4_last_logon << std::endl;
+					std::cout << "\tLast logoff (seconds since January 1, 1970 GMT: " << pBuf4->usri4_last_logoff << std::endl;
+					std::cout << "\tAccount expires (seconds since January 1, 1970 GMT: " << pBuf4->usri4_acct_expires << std::endl;
+					std::cout << "\tMax storage: " << pBuf4->usri4_max_storage << std::endl;
+					std::cout << "\tUnits per week: " << pBuf4->usri4_units_per_week << std::endl;
+					std::cout << "\tLogon hours: ";
+					for (j = 0; j < 21; j++)
+					{
+						std::cout << (BYTE)pBuf4->usri4_logon_hours[j];
+					}
+					std::cout << std::endl;
+					std::cout << "\tBad password count: " << pBuf4->usri4_bad_pw_count << std::endl;
+					std::cout << "\tNumber of logons: " << pBuf4->usri4_num_logons << std::endl;
+					std::cout << "\tLogon server: " << pBuf4->usri4_logon_server << std::endl;
+					std::cout << "\tCountry code: " << pBuf4->usri4_country_code << std::endl;
+					std::cout << "\tCode page: " << pBuf4->usri4_code_page << std::endl;
+					if (ConvertSidToStringSid
+					(pBuf4->usri4_user_sid, &sStringSid))
+					{
+						std::cout << "\tUser SID: " << sStringSid << std::endl;
+						LocalFree(sStringSid);
+					}
+					else
+					{
+						std::cout << "ConvertSidToStringSid failed with error " << GetLastError() << std::endl;
+					}
+					std::cout << "\tPrimary group ID: " << pBuf4->usri4_primary_group_id << std::endl;
+					std::cout << "\tProfile: " << pBuf4->usri4_profile << std::endl;
+					std::cout << "\tHome directory drive letter: " << pBuf4->usri4_home_dir_drive << std::endl;
+					std::cout << "\tPassword expired information: " << pBuf4->usri4_password_expired << std::endl;
+					break;
+				case 10:
+					pBuf10 = (LPUSER_INFO_10)pBuf;
+					std::cout << "\tUser account name: " << pBuf10->usri10_name << std::endl;
+					std::cout << "\tComment: " << pBuf10->usri10_comment << std::endl;
+					std::cout << "\tUser comment: " << pBuf10->usri10_usr_comment << std::endl;
+					std::cout << "\tFull name: " << pBuf10->usri10_full_name << std::endl;
+					break;
+				case 11:
+					pBuf11 = (LPUSER_INFO_11)pBuf;
+					std::cout << "\tUser account name: " << pBuf11->usri11_name << std::endl;
+					std::cout << "\tComment: " << pBuf11->usri11_comment << std::endl;
+					std::cout << "\tUser comment: " << pBuf11->usri11_usr_comment << std::endl;
+					std::cout << "\tFull name: " << pBuf11->usri11_full_name << std::endl;
+					std::cout << "\tPrivilege level: " << pBuf11->usri11_priv << std::endl;
+					std::cout << "\tAuth flags (in hex): " << pBuf11->usri11_auth_flags << std::endl;
+					std::cout << "\tPassword age (seconds): " << pBuf11->usri11_password_age << std::endl;
+					std::cout << "\tHome directory: " << pBuf11->usri11_home_dir << std::endl;
+					std::cout << "\tParameters: " << pBuf11->usri11_parms << std::endl;
+					std::cout << "\tLast logon (seconds since January 1, 1970 GMT: " << pBuf11->usri11_last_logon << std::endl;
+					std::cout << "\tLast logoff (seconds since January 1, 1970 GMT): " << pBuf11->usri11_last_logoff << std::endl;
+					std::cout << "\tBad password count: " << pBuf11->usri11_bad_pw_count << std::endl;
+					std::cout << "\tNumber of logons: " << pBuf11->usri11_num_logons << std::endl;
+					std::cout << "\tLogon server: " << pBuf11->usri11_logon_server << std::endl;
+					std::cout << "\tCountry code: " << pBuf11->usri11_country_code << std::endl;
+					std::cout << "\tWorkstations: " << pBuf11->usri11_workstations << std::endl;
+					std::cout << "\tMax storage: " << pBuf11->usri11_max_storage << std::endl;
+					std::cout << "\tUnits per week: " << pBuf11->usri11_units_per_week << std::endl;
+					wprintf(L"\tLogon hours:");
+					std::cout << "\tLogon hours: ";
+					for (j = 0; j < 21; j++)
+					{
+						std::cout << (BYTE)pBuf11->usri11_logon_hours[j];
+					}
+					std::cout << std::endl;
+					std::cout << "\tCode page " << pBuf11->usri11_code_page << std::endl;
+					break;
+				case 20:
+					pBuf20 = (LPUSER_INFO_20)pBuf;
+					std::cout << "\tUser account name: " << pBuf20->usri20_name << std::endl;
+					std::cout << "\tFull name: " << pBuf20->usri20_full_name << std::endl;
+					std::cout << "\tComment: " << pBuf20->usri20_comment << std::endl;
+					std::cout << "\tFlags (in hex): " << pBuf20->usri20_flags << std::endl;
+					std::cout << "\tUser ID: " << pBuf20->usri20_user_id << std::endl;
+					break;
+				case 23:
+					pBuf23 = (LPUSER_INFO_23)pBuf;
+					std::cout << "\tUser account name: " << pBuf23->usri23_name << std::endl;
+					std::cout << "\tFull name: " << pBuf23->usri23_full_name << std::endl;
+					std::cout << "\tComment: " << pBuf23->usri23_comment << std::endl;
+					std::cout << "\tFlags (in hex): " << pBuf23->usri23_flags << std::endl;
+					if (ConvertSidToStringSid
+					(pBuf23 -> usri23_user_sid, &sStringSid))
+					{
+						std::cout << "\tUser SID: " << sStringSid << std::endl;
+						LocalFree(sStringSid);
+					}
+					else
+					{
+						std::cout << "ConvertSidToStringSid failed with error: " << GetLastError() << std::endl;
+					}
+					break;
+				default:
+					break;
+				}
+			}
+		}
+		// Otherwise, print the system error.
+		//
+		else
+			std::cout << stderr << "NetUserGetInfo failed with error: " << nStatus << std::endl;
+		//
+		// Free the allocated memory.
+		//
+		if (pBuf != NULL)
+			NetApiBufferFree(pBuf);
+
+		switch (i)
+		{
+		case 0:
+		case 1:
+		case 10:
+			i++;
+			break;
+		case 2:
+			i = 4;
+			break;
+		case 4:
+			i = 10;
+			break;
+		case 11:
+			i = 20;
+			break;
+		case 20:
+			i = 23;
+			break;
+		default:
+			i = 24;
+			break;
+		}
+	}
+	return 1;
+}*/
 
 //Creates a snapshot of the processes running on the host and then prints each one out one by one. Uses the CreateToolhelp32Snapshot function and the OpenProcess API
 void getProcesses()

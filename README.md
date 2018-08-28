@@ -23,16 +23,21 @@ OPTIONAL
 
 getSystemInfo();
 
-    getSystemInfo will gather basic system information. (Hardware/OS Info)
-        OS Name - Version Helpers API
-        Architecture - GetNativeSystemInfo API 
-        Hostname - GetComputerNameEX API
-        Domain Name - GetComputerNameEX API
-        FQDN - GetComputerNameEX API
-        Windows Directory - GetWindowsDirectory API
-        System Directory - GetSystemDirectory API
-        Local Time - GetLocalTime API
-        System Time - GetSystemTime API
+    get-systeminfo will gather basic system information. (Hardware/OS Info)
+        OS Name 
+        OS Version
+        Architecture
+        Hostname
+        Domain Name
+        FQDN
+        Windows Directory
+        System Directory
+        Local Time
+        Last Boot time
+
+get-interactivelogons
+
+    get-interactivelogons will get information about which users are interactively logged on to the system
 
 getUserName()
 

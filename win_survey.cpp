@@ -20,7 +20,6 @@
 /       get-hotfixes
 /           report all patches on the system
 **********************************************************************************************************************/
-
 #define WIN32_LEAN_AND_MEAN
 
 #undef _WINSOCKAPI_
@@ -38,6 +37,7 @@ int main(void)
 	getNetworkInfo();
 	getNetstat();
 	getRoutes();
+	getMemoryInfo();
 	getProcesses();
 	getchar();
 	getchar();
