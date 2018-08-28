@@ -38,6 +38,7 @@ int main(void)
 	getNetstat();
 	getRoutes();
 	getMemoryInfo();
+	getHDDInfo();
 	getchar();
 	getchar();
 	return 0;

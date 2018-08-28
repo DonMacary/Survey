@@ -45,6 +45,7 @@ void getUserName();
 void getNetstat();
 void getRoutes();
 void getMemoryInfo();
+void getHDDInfo();
 //int getAccountInfo(LPWSTR userName);
 
 
@@ -757,6 +758,16 @@ void getMemoryInfo()
 	std::cout << "Total virtual memory: " << memStat.ullTotalVirtual / DIV << "GB" << std::endl;
 	std::cout << "Available virtual memeory: " << memStat.ullAvailVirtual / DIV  << "GB" << std::endl;
 };
+
+void getHDDInfo()
+{
+	std::cout << std::endl << "[+] Hard Drive Space" << std::endl << std::endl;
+	ULARGE_INTEGER p1, p2, p3;
+	GetDiskFreeSpaceEx(".", &p1, &p2, &p3);
+	printf("Total Bytes:   %llu", p2);
+	std::cout << std::endl;
+	printf("Free Bytes:   %llu", p3);
+}
 //gets the user accounts. This is a little more complicated than we expected. Due to time constraints, it is not implemented at this time.
 /*int getAccountInfo(LPWSTR userName)
 {
