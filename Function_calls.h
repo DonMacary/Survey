@@ -33,9 +33,8 @@ void getTime();
 void getSystemInfo();
 void getNetworkInfo();
 void getUserName();
-int getAccountInfo(int argc, wchar_t * argv[]);
+int getAccountInfo(LPWSTR userName);
 
-wchar_t userName[];
 
 
 //Uses GetComputerNameEX API to gather the FQDN, Hostname and Domain Name from the system
@@ -407,8 +406,9 @@ void getUserName()
 	std::string user = buffer;
 
 	std::cout << "NameSamCompatible: " << buffer << std::endl;
-	MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, buffer, -1, userName, 100);
-
+	/*LPWSTR userName = {0};
+	MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, buffer, -1, userName, 256);
+	getAccountInfo(userName);*/
 };
 
 //reports information about the network adapters on the host machine using the GetAdaptersInfo API. 
@@ -468,7 +468,7 @@ void getNetworkInfo()
 }
 
 //gets the user accounts.
-int getAccountInfo(int argc, wchar_t * argv[])
+/*int getAccountInfo(LPWSTR userName)
 {
 	DWORD dwLevel = 0;
 	LPUSER_INFO_0 pBuf = NULL;
@@ -500,8 +500,8 @@ int getAccountInfo(int argc, wchar_t * argv[])
 
 		dwLevel = i;
 
-		std::cout << "\nCalling NetUserGetInfo with Servername=" << argv[1] << " Username=" << argv[2] << " Level=" << dwLevel << std::endl;
-		nStatus = NetUserGetInfo(argv[1], argv[2], dwLevel, (LPBYTE *)&pBuf);
+		std::cout << "\nCalling NetUserGetInfo with Username=" << userName << " Level=" << dwLevel << std::endl;
+		nStatus = NetUserGetInfo(NULL, userName, dwLevel, (LPBYTE *)&pBuf);
 		
 		// If the call succeeds, print the user information.
 		
@@ -704,4 +704,4 @@ int getAccountInfo(int argc, wchar_t * argv[])
 		}
 	}
 	return 1;
-}
+}*/

@@ -44,7 +44,7 @@ get-lastlogin
 
 get-networkinfo
 
-    get-networkinfo will get information about the network adapters the host has.
+    get-networkinfo will get information about the network adapters the host has using the GetAapterInfo API.
 
 get-processes
 
@@ -58,10 +58,5 @@ get-routes
 
     get-routes will report any routes the host has.
 
-get-hotfixes
-
-    get-hotfixes will report all patches on the system
-
-I hope to include more functionality to this list, and will do so as I get more ideas. This is just the start and what I hope to accomplish in a week.
 
 Obviously this has the potential to be a lot of data. I would like to add functionality to format the output file to cleanly organize the host information for analysis. Possible output to csv for import into excel with separate pages for each function.      
