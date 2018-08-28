@@ -1,15 +1,30 @@
 #pragma once
 #pragma comment(lib, "Secur32.lib")
+#pragma comment(lib, "iphlpapi.lib")
+#pragma comment(lib, "Ws2_32.lib")
 #define SECURITY_WIN32
-#define _WIN32_WINNT 0x0500
+//#define _WIN32_WINNT 0x0500
 
+#define WIN32_LEAN_AND_MEAN
+#define MALLOC(x) HeapAlloc(GetProcessHeap(), 0, (x))
+#define FREE(x) HeapFree(GetProcessHeap(), 0, (x))
+
+#undef _WINSOCKAPI_
+#define _WINSOCKAPI_
 #include <windows.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include <stdio.h>
 #include <tchar.h>
 #include <string.h>
 #include <iostream>
+#include <iomanip>
 #include <VersionHelpers.h>
 #include <security.h>
+#include <iphlpapi.h>
+#include <Iprtrmib.h>
+
+
 
 void getSysName();
 void getOSInfo();
@@ -18,7 +33,11 @@ void getWindowsPath();
 void getSystemPath();
 void getTime();
 void getSystemInfo();
+void getNetworkInfo();
 void getUserName();
+void getNetstat();
+void getRoutes();
+
 
 //Uses GetComputerNameEX API to gather the FQDN, Hostname and Domain Name from the system
 void getSysName()
@@ -45,7 +64,7 @@ void getSysName()
 	{
 		std::cout << "Hostname: " << buffer << std::endl;		//prints it out
 	}
-	
+
 	ZeroMemory(buffer, dwSize);				 //empty the string  and the size
 
 	if (!GetComputerNameEx(ComputerNameDnsDomain, buffer, &dwSize))		//grabs the domain name
@@ -56,7 +75,7 @@ void getSysName()
 	{
 		std::cout << "Domain Name: " << buffer << std::endl;	//prints it out
 	}
-	
+
 	ZeroMemory(buffer, dwSize);				 //empty the string  and the size
 
 };
@@ -280,24 +299,24 @@ void getArchitecture()
 	//https://msdn.microsoft.com/en-us/library/windows/desktop/ms724958(v=vs.85).aspx 
 	switch (sys.wProcessorArchitecture)
 	{
-		case 0:
-			std::cout << "x86" << std::endl;
-			break;
-		case 5:
-			std::cout << "ARM" << std::endl;
-			break;
-		case 6:
-			std::cout << "Intel Itanium-based" << std::endl;
-			break;
-		case 9:
-			std::cout << "x64" << std::endl;
-			break;
-		case 12:
-			std::cout << "ARM64" << std::endl;
-			break;
-		default:
-			std::cout << "Unknown" << std::endl;
-			break;
+	case 0:
+		std::cout << "x86" << std::endl;
+		break;
+	case 5:
+		std::cout << "ARM" << std::endl;
+		break;
+	case 6:
+		std::cout << "Intel Itanium-based" << std::endl;
+		break;
+	case 9:
+		std::cout << "x64" << std::endl;
+		break;
+	case 12:
+		std::cout << "ARM64" << std::endl;
+		break;
+	default:
+		std::cout << "Unknown" << std::endl;
+		break;
 	}
 
 };
@@ -310,7 +329,7 @@ void getWindowsPath()
 	DWORD size = sizeof(PATH);		//size of the path variable 
 	UINT results = GetWindowsDirectory(PATH, size);		//stores the path in the variable and the sresult of the function is an int which means various things
 
-	//if the result int is = 0 then the GetWindowsDirectory API failed
+														//if the result int is = 0 then the GetWindowsDirectory API failed
 	if (results == 0)
 	{
 		std::cout << "Windows Directory Path: Failed to find" << std::endl;
@@ -333,7 +352,7 @@ void getSystemPath()
 	TCHAR PATH[256] = TEXT("");		//variable to store the path
 	DWORD size = sizeof(PATH);		//size of the path variable 
 	UINT results = GetSystemDirectory(PATH, size);		//stores the path in the variable and the sresult of the function is an int which means various things
-												//if the result int is = 0 then the GetWindowsDirectory API failed
+														//if the result int is = 0 then the GetWindowsDirectory API failed
 	if (results == 0)
 	{
 		std::cout << "Windows System Path: Failed to find" << std::endl;
@@ -379,7 +398,7 @@ void getSystemInfo()
 
 };
 
-//gets the username of the currently logged in user
+//gets the username of the currently logged in user using the GetUserNameEx API
 void getUserName()
 {
 	TCHAR buffer[256] = TEXT("");
@@ -389,6 +408,322 @@ void getUserName()
 
 	std::cout << "NameSamCompatible: " << buffer << std::endl;
 
+};
+
+//reports information about the network adapters on the host machine using the GetAdaptersInfo API. 
+void getNetworkInfo()
+{
+	std::cout << std::endl << "[+] Network Adapters" << std::endl << std::endl;
+
+	IP_ADAPTER_INFO  *pAdapterInfo;				//pointer to a adapter info 
+	ULONG            ulOutBufLen;				//buffer for input parameter
+	DWORD            dwRetVal;					//error checking variable
+
+
+	pAdapterInfo = (IP_ADAPTER_INFO *)malloc(sizeof(IP_ADAPTER_INFO));		//allocating memory for the pointer
+	ulOutBufLen = sizeof(IP_ADAPTER_INFO);									//declare the size of the buffer as the size of the adapter info pointer
+
+
+	//initial GetAdapterInfo call with error checking - This call to the function is meant to fail, 
+	//and is used to ensure that the ulOutBufLen variable specifies a size sufficient for holding all the information returned to pAdapterInfo
+	if (GetAdaptersInfo(pAdapterInfo, &ulOutBufLen) != ERROR_SUCCESS) 
+	{
+		free(pAdapterInfo);		//free up the pointer so we can make the call again
+		pAdapterInfo = (IP_ADAPTER_INFO *)malloc(ulOutBufLen);			//correctly initialize the size of the pointer based off the size of the buffer from the initial call
+	}
+
+	//now that we have the right size of the adapter pointer we call the function again and store the result in dwRetVal. We do an initial error check to make sure the function 
+	//call went through and print if it failed.
+	if ((dwRetVal = GetAdaptersInfo(pAdapterInfo, &ulOutBufLen)) != ERROR_SUCCESS) 
+	{
+		std::cout << "GetAdaptersInfo call failed with " << dwRetVal << std::endl;
+	}
+
+	//store the adapter information in a PIP_ADAPTER_INFO object, this is essentially an array that stores all the adapters. We will iterate through this array and 
+	//print each adpaters information
+	PIP_ADAPTER_INFO pAdapter = pAdapterInfo;
+	while (pAdapter) {
+		std::cout << "Adapter Name: " << pAdapter->Description << std::endl;			//displays thhe network adapter name
+		std::cout << "\tIP Address: " << pAdapter->IpAddressList.IpAddress.String << std::endl;		//displays the ip address
+		std::cout << "\tIP Mask: " << pAdapter->IpAddressList.IpMask.String << std::endl;			//displays the subnet mask
+		std::cout << "\tGateway: " << pAdapter->GatewayList.IpAddress.String <<std::endl;			//displays the gateway
+		std::cout << "\tIndex: " << pAdapter->Index << std::endl;
+		//checks if dhcp is enabled, if so state so and if it can find the dhcp server address, report it.
+		if (pAdapter->DhcpEnabled)
+		{	
+			std::cout << "\tDHCP Enabled: Yes" << std::endl;
+			std::cout << "\t\tDHCP Server: \t" << pAdapter->DhcpServer.IpAddress.String << std::endl;
+		}
+		else
+			std::cout << "\tDHCP Enabled: No" << std::endl;
+
+		pAdapter = pAdapter->Next;	//move to the next adapter in the array
+	}
+
+	//free the object when done
+	if (pAdapterInfo)
+		free(pAdapterInfo);
+};
+
+//displays the netstat information for the host using the GetExtendedTCPTable API. This function gets the 
+void getNetstat()
+{
+	std::cout << std::internal;
+	std::cout << std::endl << "[+] Active Connections" << std::endl << std::endl;
+	std::cout << std::setw(10)  << "  Proto" << std::setw(25) << "Local Address" << std::setw(35) << "Foreign Address" << std::setw(15) << "State" << std::setw(20) << "PID" << std::endl;
+	PMIB_TCPTABLE_OWNER_PID pTCPtable;			//a pointer to the table that holds all of the network connections
+	PMIB_TCPROW_OWNER_PID pTCProw;				//a pointer to a specific row in the table
+	DWORD size = 0;									//the size of the table (number of entries)
+	DWORD dwResult = 0;							//holds error code results
+
+
+
+	pTCPtable = (MIB_TCPTABLE_OWNER_PID *)malloc(sizeof(MIB_TCPTABLE_OWNER_PID));		//allocating memory for the table pointer
+	pTCProw = (MIB_TCPROW_OWNER_PID *)malloc(sizeof(MIB_TCPTABLE_OWNER_PID));			//allocating memory for the row pointer
+	size = sizeof(MIB_TCPROW_OWNER_PID);												//setting the initial size - this will be modified on the first function call
+
+	if (pTCPtable == NULL) 
+	{
+		printf("Error allocating memory\n");
+		return;
+	}
+
+	//much like the network adapter function we will need to call the API twice - once to get the actual size of the table (since all we can do right now is guess) and then the second
+	//time to actually get the table filled out. 
+	if (GetExtendedTcpTable(pTCPtable, &size, TRUE, AF_INET, TCP_TABLE_OWNER_PID_ALL, 0) == ERROR_INSUFFICIENT_BUFFER)
+	{
+		free(pTCPtable);				//free the memory for the table 
+		pTCPtable = (MIB_TCPTABLE_OWNER_PID *)malloc(size);				//reallocate the memory for the table to the correct size
+		if (pTCPtable == NULL)				//make sure the memory was allocated properly
+		{
+			printf("Error allocating memory\n");
+			return;
+		}
+	}
+	dwResult = GetExtendedTcpTable(pTCPtable, &size, TRUE, AF_INET, TCP_TABLE_OWNER_PID_ALL, 0);			//second call to the API and store the results ina  variable for error checking
+	if (dwResult != NO_ERROR)		//if there was an error then return and dont go any further!!
+	{
+		std::cout << "There was an error getting the Extended TCP Table" << std::endl;
+		return;
+	}
+
+	//loop through all the rows in the table, on each row output the data NOTE - THIS WILL NEED TO BE CLEANED UP TO BETTER OUTPUT THE DATA (it looks weird right now)
+	for (DWORD dwCounter = 0; dwCounter < pTCPtable->dwNumEntries; dwCounter++)
+	{
+		pTCProw = &pTCPtable->table[dwCounter];			//sets the tcprow to the current row
+
+		char localAddrStr[INET_ADDRSTRLEN];				//a string to store the local address
+		char remoteAddrStr[INET_ADDRSTRLEN];			//a string to store the remote address
+
+		InetNtop(AF_INET, &pTCProw->dwLocalAddr, (PSTR)localAddrStr, sizeof(localAddrStr));				//this function converts the binary remote address to a string so it is human readable
+		InetNtop(AF_INET, &pTCProw->dwRemoteAddr, (PSTR)remoteAddrStr, sizeof(remoteAddrStr));
+		
+
+		std::cout << std::setw(10) << "  TCP";				//print TCP
+		std::cout << std::setw(25) << localAddrStr << ":" << ntohs((u_short)pTCProw->dwLocalPort);			//the last function in this converts the port to human readable format (from binary value)
+		std::cout << std::setw(25) << remoteAddrStr << ":" << ntohs((u_short)pTCProw->dwRemotePort);
+
+		//checks all the different possible states and prints the wording for that state
+		switch (pTCProw->dwState) {
+		case MIB_TCP_STATE_CLOSED:
+			std::cout << std::setw(20) << "CLOSED\t";
+			break;
+		case MIB_TCP_STATE_LISTEN:
+			std::cout << std::setw(20) << "LISTEN\t";
+			break;
+		case MIB_TCP_STATE_SYN_SENT:
+			std::cout << std::setw(20) << "SYN-SENT\t";
+			break;
+		case MIB_TCP_STATE_SYN_RCVD:
+			std::cout << std::setw(20) << "SYN-RECEIVED\t";
+			break;
+		case MIB_TCP_STATE_ESTAB:
+			std::cout << std::setw(20) << "ESTABLISHED\t";
+			break;
+		case MIB_TCP_STATE_FIN_WAIT1:
+			std::cout << std::setw(20) << "FIN-WAIT-1\t";
+			break;
+		case MIB_TCP_STATE_FIN_WAIT2:
+			std::cout << std::setw(20) << "FIN-WAIT-2 \t";
+			break;
+		case MIB_TCP_STATE_CLOSE_WAIT:
+			std::cout << std::setw(20) << "CLOSE-WAIT\t";
+			break;
+		case MIB_TCP_STATE_CLOSING:
+			std::cout << std::setw(20) << "CLOSING\t";
+			break;
+		case MIB_TCP_STATE_LAST_ACK:
+			std::cout << std::setw(20) << "LAST-ACK\t";
+			break;
+		case MIB_TCP_STATE_TIME_WAIT:
+			std::cout << std::setw(20) << "TIME-WAIT\t";
+			break;
+		case MIB_TCP_STATE_DELETE_TCB:
+			std::cout << std::setw(20) << "DELETE-TCB\t";
+			break;
+		default:
+			std::cout << std::setw(20) << "UNKNOWN dwState value\t";
+			break;
+		}
+		//print the PID
+		std::cout << std::setw(10) << pTCProw->dwOwningPid << std::endl;
+	}
+	//free the memory for the pointers and ge on your way!!!
+	pTCProw = NULL;
+	free(pTCProw);
+	free(pTCPtable);
+	
+}; 
+
+void getRoutes()
+{
+
+	std::cout <<std::endl << "[+] Routes" << std::endl << std::endl;
+	std::cout << std::left;
+	std::cout << std::setw(25) << "Network Destination" << std::setw(25) << "Netmask" << std::setw(25) << "Gateway" <<std::setw(25) << "Interface" << std::setw(25) << "Metric" << std::endl;
+	// Declare and initialize variables.
+
+	/* variables used for GetIfForwardTable */
+	PMIB_IPFORWARDTABLE pIpForwardTable;
+	PMIB_IPFORWARDROW pIpForwardRow;
+	DWORD dwSize = 0;
+	DWORD dwRetVal = 0;
+
+	struct in_addr IpAddr;
+
+	int i;
+
+	pIpForwardTable = (MIB_IPFORWARDTABLE *)malloc(sizeof(MIB_IPFORWARDTABLE));
+	pIpForwardRow = (MIB_IPFORWARDROW *)malloc(sizeof(MIB_IPFORWARDROW));
+
+	if (pIpForwardTable == NULL) 
+	{
+		printf("Error allocating memory\n");
+		return;
+	}
+
+	if (GetIpForwardTable(pIpForwardTable, &dwSize, 0) == ERROR_INSUFFICIENT_BUFFER) 
+	{
+		free(pIpForwardTable);
+		pIpForwardTable = (MIB_IPFORWARDTABLE *)malloc(dwSize);
+
+		if (pIpForwardTable == NULL) 
+		{
+			printf("Error allocating memory\n");
+			return;
+		}
+	}
+
+	/* Note that the IPv4 addresses returned in
+	* GetIpForwardTable entries are in network byte order
+	*/
+	if ((dwRetVal = GetIpForwardTable(pIpForwardTable, &dwSize, 0)) == NO_ERROR) 
+	{
+		for (i = 0; i < (int)pIpForwardTable->dwNumEntries; i++) {
+
+			pIpForwardRow = &pIpForwardTable->table[i];
+
+			char destIP[INET_ADDRSTRLEN];				//a string to store the destination address
+			char maskIP[INET_ADDRSTRLEN];			//a string to store the mask IP
+			char gatewayIP[INET_ADDRSTRLEN];
+			char interfaceIP[INET_ADDRSTRLEN];
+
+			InetNtop(AF_INET, &pIpForwardRow->dwForwardDest, (PSTR)destIP, sizeof(destIP));
+			InetNtop(AF_INET, &pIpForwardRow->dwForwardMask, (PSTR)maskIP, sizeof(maskIP));
+			InetNtop(AF_INET, &pIpForwardRow->dwForwardNextHop, (PSTR)gatewayIP, sizeof(gatewayIP));
+			
+
+			std::cout << std::setw(25) << destIP;
+			std::cout << std::setw(25) << maskIP;
+			if (i == 0)
+			{
+				std::cout << std::setw(25) << gatewayIP;
+				std::cout << std::setw(25) << pIpForwardRow->dwForwardIfIndex;
+			}
+			else
+			{
+				std::cout << std::setw(25) << "On-link" << std::setw(25) << gatewayIP;
+			}
+			std::cout << std::setw(25) << pIpForwardRow->dwForwardMetric1 << std::endl;
+
+
+			/*
+			//Windows has the ability to determine the protocol that was used to create the route. I feel like this could be very useful in the future knowing this information, however,
+			//This is not an inteded feature of the current project and due to time contraints I am not going to play around with this info.
+			printf("\tRoute[%d] Proto: %ld - ", i,
+				pIpForwardTable->table[i].dwForwardProto);
+			switch (pIpForwardTable->table[i].dwForwardProto) {
+			case MIB_IPPROTO_OTHER:
+				printf("other\n");
+				break;
+			case MIB_IPPROTO_LOCAL:
+				printf("local interface\n");
+				break;
+			case MIB_IPPROTO_NETMGMT:
+				printf("static route set through network management \n");
+				break;
+			case MIB_IPPROTO_ICMP:
+				printf("result of ICMP redirect\n");
+				break;
+			case MIB_IPPROTO_EGP:
+				printf("Exterior Gateway Protocol (EGP)\n");
+				break;
+			case MIB_IPPROTO_GGP:
+				printf("Gateway-to-Gateway Protocol (GGP)\n");
+				break;
+			case MIB_IPPROTO_HELLO:
+				printf("Hello protocol\n");
+				break;
+			case MIB_IPPROTO_RIP:
+				printf("Routing Information Protocol (RIP)\n");
+				break;
+			case MIB_IPPROTO_IS_IS:
+				printf
+				("Intermediate System-to-Intermediate System (IS-IS) protocol\n");
+				break;
+			case MIB_IPPROTO_ES_IS:
+				printf("End System-to-Intermediate System (ES-IS) protocol\n");
+				break;
+			case MIB_IPPROTO_CISCO:
+				printf("Cisco Interior Gateway Routing Protocol (IGRP)\n");
+				break;
+			case MIB_IPPROTO_BBN:
+				printf("BBN Internet Gateway Protocol (IGP) using SPF\n");
+				break;
+			case MIB_IPPROTO_OSPF:
+				printf("Open Shortest Path First (OSPF) protocol\n");
+				break;
+			case MIB_IPPROTO_BGP:
+				printf("Border Gateway Protocol (BGP)\n");
+				break;
+			case MIB_IPPROTO_NT_AUTOSTATIC:
+				printf("special Windows auto static route\n");
+				break;
+			case MIB_IPPROTO_NT_STATIC:
+				printf("special Windows static route\n");
+				break;
+			case MIB_IPPROTO_NT_STATIC_NON_DOD:
+				printf
+				("special Windows static route not based on Internet standards\n");
+				break;
+			default:
+				printf("UNKNOWN Proto value\n");
+				break;
+			}
+			*/
+		}
+		pIpForwardRow = NULL;
+		free(pIpForwardTable);
+		free(pIpForwardRow);
+		return;
+	}
+	else {
+		printf("\tGetIpForwardTable failed.\n");
+		pIpForwardRow = NULL;
+		free(pIpForwardTable);
+		free(pIpForwardRow);
+		return;
+	}
 };
 
 
