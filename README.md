@@ -61,9 +61,11 @@ getRoutes()
     getRoutes() will report any routes the host has.
 
 getMemoryInfo();
+
     gets info on the computer's memory.
 
 getProcesses();
+
 	get-procceses will report the running proccesses on the host. Further implementations will only gather processes created in the last hour, processes without a service etc...
 
 OPTIONAL FUNCTIONS
