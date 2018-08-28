@@ -37,6 +37,7 @@ int main(void)
 	getNetworkInfo();
 	getNetstat();
 	getRoutes();
+	getMemoryInfo();
 	getchar();
 	getchar();
 	return 0;

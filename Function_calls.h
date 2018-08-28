@@ -4,6 +4,7 @@
 #pragma comment(lib, "advapi32.lib")
 #pragma comment(lib, "netapi32.lib")
 #pragma comment(lib, "Ws2_32.lib")
+#pragma comment(lib, "user32.lib")
 #define SECURITY_WIN32
 //#define _WIN32_WINNT 0x0500
 
@@ -11,6 +12,7 @@
 #define WIN32_LEAN_AND_MEAN
 #define MALLOC(x) HeapAlloc(GetProcessHeap(), 0, (x))
 #define FREE(x) HeapFree(GetProcessHeap(), 0, (x))
+#define DIV 1073741824
 
 
 
@@ -42,6 +44,7 @@ void getNetworkInfo();
 void getUserName();
 void getNetstat();
 void getRoutes();
+void getMemoryInfo();
 //int getAccountInfo(LPWSTR userName);
 
 
@@ -408,6 +411,7 @@ void getSystemInfo()
 //gets the username of the currently logged in user using the GetUserNameEx API
 void getUserName()
 {
+	std::cout << std::endl << "[+] User Name" << std::endl << std::endl;
 	TCHAR buffer[256] = TEXT("");
 	DWORD buffer_size = sizeof(buffer);
 	LPDWORD nSize = &buffer_size;
@@ -415,6 +419,7 @@ void getUserName()
 	std::string user = buffer;
 
 	std::cout << "NameSamCompatible: " << buffer << std::endl;
+	//the below portion goes with getAccountInfo. Since that is currently on hold, the following code has been commented out.
 	/*LPWSTR userName = {0};
 	MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, buffer, -1, userName, 256);
 	getAccountInfo(userName);*/
@@ -735,6 +740,22 @@ void getRoutes()
 		free(pIpForwardRow);
 		return;
 	}
+};
+
+//gets info on the computer's memory.
+void getMemoryInfo()
+{
+	MEMORYSTATUSEX memStat;
+
+	memStat.dwLength = sizeof(memStat);
+
+	GlobalMemoryStatusEx(&memStat);
+	std::cout << std::endl << "[+] Memory" << std::endl << std::endl;
+	std::cout << "Memory in use: " << memStat.dwMemoryLoad << "%" << std::endl;
+	std::cout << "Total physical memory: " << memStat.ullTotalPhys / DIV  << "GB" << std::endl;
+	std::cout << "Available physical memory: " << memStat.ullAvailPhys / DIV  << "GB" << std::endl;
+	std::cout << "Total virtual memory: " << memStat.ullTotalVirtual / DIV << "GB" << std::endl;
+	std::cout << "Available virtual memeory: " << memStat.ullAvailVirtual / DIV  << "GB" << std::endl;
 };
 //gets the user accounts. This is a little more complicated than we expected. Due to time constraints, it is not implemented at this time.
 /*int getAccountInfo(LPWSTR userName)
