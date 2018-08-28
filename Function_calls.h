@@ -32,6 +32,10 @@
 #include <assert.h>
 #include <LM.h>
 #include <sddl.h>
+#include <Iprtrmib.h>
+#include <psapi.h>
+#include <tlhelp32.h>
+#include <tchar.h>
 
 void getSysName();
 void getOSInfo();
@@ -45,7 +49,7 @@ void getUserName();
 void getNetstat();
 void getRoutes();
 void getMemoryInfo();
-//int getAccountInfo(LPWSTR userName);
+void getProcesses();
 
 
 
@@ -591,39 +595,39 @@ void getNetstat()
 
 };
 
+//Uses the GetIpForwardTable API to get information about the hosts routes
 void getRoutes()
 {
 
-	std::cout << std::endl << "[+] Routes" << std::endl << std::endl;
+	//print the header
+	std::cout <<std::endl << "[+] Routes" << std::endl << std::endl;
 	std::cout << std::left;
 	std::cout << std::setw(25) << "Network Destination" << std::setw(25) << "Netmask" << std::setw(25) << "Gateway" << std::setw(25) << "Interface" << std::setw(25) << "Metric" << std::endl;
 	// Declare and initialize variables.
 
 	/* variables used for GetIfForwardTable */
-	PMIB_IPFORWARDTABLE pIpForwardTable;
-	PMIB_IPFORWARDROW pIpForwardRow;
-	DWORD dwSize = 0;
-	DWORD dwRetVal = 0;
+	PMIB_IPFORWARDTABLE pIpForwardTable;			//pointer to the table which holds to routes
+	PMIB_IPFORWARDROW pIpForwardRow;				//pointer to a specific row in the table 
+	DWORD dwSize = 0;								//size of the table
+	DWORD dwRetVal = 0;								//variable to hold the results for error checking
 
-	struct in_addr IpAddr;
+	pIpForwardTable = (MIB_IPFORWARDTABLE *)malloc(sizeof(MIB_IPFORWARDTABLE));		//allocate memory for the table - this will need to be done again after we know the correct size
+	pIpForwardRow = (MIB_IPFORWARDROW *)malloc(sizeof(MIB_IPFORWARDROW));			//allocate memory for the row
 
-	int i;
-
-	pIpForwardTable = (MIB_IPFORWARDTABLE *)malloc(sizeof(MIB_IPFORWARDTABLE));
-	pIpForwardRow = (MIB_IPFORWARDROW *)malloc(sizeof(MIB_IPFORWARDROW));
-
-	if (pIpForwardTable == NULL)
+	//ensure memory was allocated correctly
+	if (pIpForwardTable == NULL) 
 	{
 		printf("Error allocating memory\n");
 		return;
 	}
 
-	if (GetIpForwardTable(pIpForwardTable, &dwSize, 0) == ERROR_INSUFFICIENT_BUFFER)
+	//calls the API but we expect that it will fail since our size isnt big enough - this will put the correct size into the dwSize variable
+	if (GetIpForwardTable(pIpForwardTable, &dwSize, 0) == ERROR_INSUFFICIENT_BUFFER) 
 	{
-		free(pIpForwardTable);
-		pIpForwardTable = (MIB_IPFORWARDTABLE *)malloc(dwSize);
-
-		if (pIpForwardTable == NULL)
+		free(pIpForwardTable);			//free the memory in the table so we can reallocate
+		pIpForwardTable = (MIB_IPFORWARDTABLE *)malloc(dwSize);			//reallocate memory with the correct size
+		//ensure memory was correctly allocated
+		if (pIpForwardTable == NULL) 
 		{
 			printf("Error allocating memory\n");
 			return;
@@ -633,29 +637,33 @@ void getRoutes()
 	/* Note that the IPv4 addresses returned in
 	* GetIpForwardTable entries are in network byte order
 	*/
-	if ((dwRetVal = GetIpForwardTable(pIpForwardTable, &dwSize, 0)) == NO_ERROR)
+	//as long as there is no errors loop through each row in the table
+	if ((dwRetVal = GetIpForwardTable(pIpForwardTable, &dwSize, 0)) == NO_ERROR) 
 	{
-		for (i = 0; i < (int)pIpForwardTable->dwNumEntries; i++) {
+		for (int i = 0; i < (int)pIpForwardTable->dwNumEntries; i++) {
 
-			pIpForwardRow = &pIpForwardTable->table[i];
+			pIpForwardRow = &pIpForwardTable->table[i];				//sets the row to the iteration
 
 			char destIP[INET_ADDRSTRLEN];				//a string to store the destination address
 			char maskIP[INET_ADDRSTRLEN];			//a string to store the mask IP
-			char gatewayIP[INET_ADDRSTRLEN];
-			char interfaceIP[INET_ADDRSTRLEN];
+			char gatewayIP[INET_ADDRSTRLEN];			//a string to store the gateway/interfaceIP
 
+			//these functions convert the numeric byte entries for the IPs into strings
 			InetNtop(AF_INET, &pIpForwardRow->dwForwardDest, (PSTR)destIP, sizeof(destIP));
 			InetNtop(AF_INET, &pIpForwardRow->dwForwardMask, (PSTR)maskIP, sizeof(maskIP));
 			InetNtop(AF_INET, &pIpForwardRow->dwForwardNextHop, (PSTR)gatewayIP, sizeof(gatewayIP));
 
-
+			//print the destIP and Mask
 			std::cout << std::setw(25) << destIP;
 			std::cout << std::setw(25) << maskIP;
+			//on the first entry we know that it is the default gateway so were just gonna print it how it is (this is hacky I know)
 			if (i == 0)
 			{
 				std::cout << std::setw(25) << gatewayIP;
 				std::cout << std::setw(25) << pIpForwardRow->dwForwardIfIndex;
 			}
+			//for the rest of the entries were going to print the gateway as On-Link (this will need to be changed as we have multiple interfaces but for now it works)
+			//in the future i will need to compare the interface index to one gathered from the network adapter and then print the IP from that...
 			else
 			{
 				std::cout << std::setw(25) << "On-link" << std::setw(25) << gatewayIP;
@@ -728,9 +736,9 @@ void getRoutes()
 			}
 			*/
 		}
-		pIpForwardRow = NULL;
-		free(pIpForwardTable);
-		free(pIpForwardRow);
+		pIpForwardRow = NULL;			//NULL out the row so we can free
+		free(pIpForwardTable);			//free the table
+		free(pIpForwardRow);			//free the row
 		return;
 	}
 	else {
@@ -741,6 +749,7 @@ void getRoutes()
 		return;
 	}
 };
+
 
 //gets info on the computer's memory.
 void getMemoryInfo()
@@ -995,3 +1004,61 @@ void getMemoryInfo()
 	}
 	return 1;
 }*/
+
+//Creates a snapshot of the processes running on the host and then prints each one out one by one. Uses the CreateToolhelp32Snapshot function and the OpenProcess API
+void getProcesses()
+{
+	HANDLE hProcessSnap;				//Handle on the process snapshot
+	HANDLE hProcess;					//handle on the current process being printed
+	PROCESSENTRY32 pe32;				//variable which stores the current process information
+	DWORD dwPriorityClass;				//priority class variable
+
+	// Take a snapshot of all processes in the system.
+	hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);			
+	if (hProcessSnap == INVALID_HANDLE_VALUE)				//handles if the snapshot did not work
+	{
+		std::cout << "Failure to snapshot processes" << std::endl;
+		return;
+	}
+
+	// Set the size of the structure before using it.
+	pe32.dwSize = sizeof(PROCESSENTRY32);					
+
+	// Retrieve information about the first process,
+	// and exit if unsuccessful
+	if (!Process32First(hProcessSnap, &pe32))
+	{
+		CloseHandle(hProcessSnap);          // clean the snapshot object
+		return;
+	}
+
+	// Now walk the snapshot of processes, and
+	// display information about each process in turn
+	do
+	{
+		std::cout << std::endl << std::endl << "=====================================================" << std::endl;
+		std::cout << std::endl << "PROCESS NAME: " << pe32.szExeFile << std::endl;
+		std::cout << std::endl << "------------------------------------------------------" << std::endl;
+
+		// Retrieve the priority class.
+		dwPriorityClass = 0;
+		hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pe32.th32ProcessID);		//opens a handle on each process with all access
+		if (hProcess == NULL)
+		{
+			std::cout << "Failure to open process" << std::endl;
+		}
+		else
+		{
+			dwPriorityClass = GetPriorityClass(hProcess);			
+			if (!dwPriorityClass)
+				CloseHandle(hProcess);
+		}
+
+		std::cout << std::endl << "  Process ID: " << pe32.th32ProcessID << std::endl;
+		std::cout << std::endl <<  "  Parent process ID: " << pe32.th32ParentProcessID << std::endl;
+
+	} while (Process32Next(hProcessSnap, &pe32));
+
+	CloseHandle(hProcessSnap);
+	return;
+};
