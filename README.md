@@ -10,19 +10,20 @@ This program is intended to be a windows post-exploitation tool to scout the tar
 
 **The program will (hopefully) incorporate the following functions:**
 
-    get-systeminfo
-    get-interactivelogons
+	getSystemInfo();
+	getUserName();
+	getNetworkInfo();
+	getNetstat();
+	getRoutes();
+
+OPTIONAL
     get-lastlogin
-    get-networkinfo
-    get-processes
     get-antivirus
-    get-netstat
-    get-routes
     get-hotfixes
 
-get-systeminfo
+getSystemInfo();
 
-    get-systeminfo will gather basic system information. (Hardware/OS Info)
+    getSystemInfo will gather basic system information. (Hardware/OS Info)
         OS Name - Version Helpers API
         Architecture - GetNativeSystemInfo API 
         Hostname - GetComputerNameEX API
@@ -33,29 +34,30 @@ get-systeminfo
         Local Time - GetLocalTime API
         System Time - GetSystemTime API
 
-get-interactivelogons
+getUserName()
 
-    get-interactivelogons will get information about which users is interactively logged on to the system using the GetUserNameEx API
+    getUserName() will get information about which user is interactively logged on to the system using the GetUserNameEx API
 
-get-lastlogin
+getNetworkInfo()
 
-    get-lastlogin will get information about the last logged on user
-
-get-networkinfo
-
-    get-networkinfo will get information about the network adapters the host has using the GetAapterInfo API.
+    getNetworkInfo() will get information about the network adapters the host has using the GetAapterInfo API.
 
 get-processes
 
     get-procceses will report the running proccesses on the host. Further implementations will only gather processes created in the last hour, processes without a service etc...
 
-get-netstat
+getNetstat()
 
-    get-netstat will report all the network connections the host has.
+    getNetstat() will report all the network connections the host has.
 
-get-routes
+getRoutes()
 
-    get-routes will report any routes the host has.
+    getRoutes() will report any routes the host has.
+
+OPTIONAL FUNCTIONS
+get-lastlogin
+
+    get-lastlogin will get information about the last logged on user
 
 
 Obviously this has the potential to be a lot of data. I would like to add functionality to format the output file to cleanly organize the host information for analysis. Possible output to csv for import into excel with separate pages for each function.      
