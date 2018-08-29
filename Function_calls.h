@@ -809,7 +809,7 @@ void getMemoryInfo(std::ofstream &outputfile)
 	outputfile << "Total virtual memory: " << memStat.ullTotalVirtual / DIV << "GB" << std::endl;
 	outputfile << "Available virtual memeory: " << memStat.ullAvailVirtual / DIV << "GB" << std::endl;
 };
-
+//gets total space and space available on the HDD
 void getHDDInfo(std::ofstream &outputfile)
 {
 	std::cout << std::endl << "[+] Hard Drive Space" << std::endl << std::endl;
@@ -872,6 +872,7 @@ void getProcesses(std::ofstream &outputfile)
 	CloseHandle(hProcessSnap);
 	return;
 };
+//gets some basic data on the BIOS
 void getBIOS(std::ofstream &outputfile)
 {
 	typedef struct RAW_SMBIOS_DATA
