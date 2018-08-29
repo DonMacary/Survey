@@ -8,7 +8,6 @@
 #define SECURITY_WIN32
 //#define _WIN32_WINNT 0x0500
 
-
 #define WIN32_LEAN_AND_MEAN
 #define MALLOC(x) HeapAlloc(GetProcessHeap(), 0, (x))
 #define FREE(x) HeapFree(GetProcessHeap(), 0, (x))
@@ -32,6 +31,10 @@
 #include <assert.h>
 #include <LM.h>
 #include <sddl.h>
+#include <Iprtrmib.h>
+#include <psapi.h>
+#include <tlhelp32.h>
+#include <tchar.h>
 
 void getSysName();
 void getOSInfo();
@@ -47,6 +50,7 @@ void getRoutes();
 void getMemoryInfo();
 void getHDDInfo();
 //int getAccountInfo(LPWSTR userName);
+void getProcesses();
 
 
 
@@ -440,9 +444,9 @@ void getNetworkInfo()
 	ulOutBufLen = sizeof(IP_ADAPTER_INFO);									//declare the size of the buffer as the size of the adapter info pointer
 
 
-	//initial GetAdapterInfo call with error checking - This call to the function is meant to fail, 
-	//and is used to ensure that the ulOutBufLen variable specifies a size sufficient for holding all the information returned to pAdapterInfo
-	if (GetAdaptersInfo(pAdapterInfo, &ulOutBufLen) != ERROR_SUCCESS) 
+																			//initial GetAdapterInfo call with error checking - This call to the function is meant to fail, 
+																			//and is used to ensure that the ulOutBufLen variable specifies a size sufficient for holding all the information returned to pAdapterInfo
+	if (GetAdaptersInfo(pAdapterInfo, &ulOutBufLen) != ERROR_SUCCESS)
 	{
 		free(pAdapterInfo);		//free up the pointer so we can make the call again
 		pAdapterInfo = (IP_ADAPTER_INFO *)malloc(ulOutBufLen);			//correctly initialize the size of the pointer based off the size of the buffer from the initial call
@@ -450,7 +454,7 @@ void getNetworkInfo()
 
 	//now that we have the right size of the adapter pointer we call the function again and store the result in dwRetVal. We do an initial error check to make sure the function 
 	//call went through and print if it failed.
-	if ((dwRetVal = GetAdaptersInfo(pAdapterInfo, &ulOutBufLen)) != ERROR_SUCCESS) 
+	if ((dwRetVal = GetAdaptersInfo(pAdapterInfo, &ulOutBufLen)) != ERROR_SUCCESS)
 	{
 		std::cout << "GetAdaptersInfo call failed with " << dwRetVal << std::endl;
 	}
@@ -462,10 +466,10 @@ void getNetworkInfo()
 		std::cout << "Adapter Name: " << pAdapter->Description << std::endl;			//displays thhe network adapter name
 		std::cout << "\tIP Address: " << pAdapter->IpAddressList.IpAddress.String << std::endl;		//displays the ip address
 		std::cout << "\tIP Mask: " << pAdapter->IpAddressList.IpMask.String << std::endl;			//displays the subnet mask
-		std::cout << "\tGateway: " << pAdapter->GatewayList.IpAddress.String <<std::endl;			//displays the gateway
-		//checks if dhcp is enabled, if so state so and if it can find the dhcp server address, report it.
+		std::cout << "\tGateway: " << pAdapter->GatewayList.IpAddress.String << std::endl;			//displays the gateway
+																									//checks if dhcp is enabled, if so state so and if it can find the dhcp server address, report it.
 		if (pAdapter->DhcpEnabled)
-		{	
+		{
 			std::cout << "\tDHCP Enabled: Yes" << std::endl;
 			std::cout << "\t\tDHCP Server: \t" << pAdapter->DhcpServer.IpAddress.String << std::endl;
 		}
@@ -592,38 +596,38 @@ void getNetstat()
 
 };
 
+//Uses the GetIpForwardTable API to get information about the hosts routes
 void getRoutes()
 {
 
+	//print the header
 	std::cout << std::endl << "[+] Routes" << std::endl << std::endl;
 	std::cout << std::left;
 	std::cout << std::setw(25) << "Network Destination" << std::setw(25) << "Netmask" << std::setw(25) << "Gateway" << std::setw(25) << "Interface" << std::setw(25) << "Metric" << std::endl;
 	// Declare and initialize variables.
 
 	/* variables used for GetIfForwardTable */
-	PMIB_IPFORWARDTABLE pIpForwardTable;
-	PMIB_IPFORWARDROW pIpForwardRow;
-	DWORD dwSize = 0;
-	DWORD dwRetVal = 0;
+	PMIB_IPFORWARDTABLE pIpForwardTable;			//pointer to the table which holds to routes
+	PMIB_IPFORWARDROW pIpForwardRow;				//pointer to a specific row in the table 
+	DWORD dwSize = 0;								//size of the table
+	DWORD dwRetVal = 0;								//variable to hold the results for error checking
 
-	struct in_addr IpAddr;
+	pIpForwardTable = (MIB_IPFORWARDTABLE *)malloc(sizeof(MIB_IPFORWARDTABLE));		//allocate memory for the table - this will need to be done again after we know the correct size
+	pIpForwardRow = (MIB_IPFORWARDROW *)malloc(sizeof(MIB_IPFORWARDROW));			//allocate memory for the row
 
-	int i;
-
-	pIpForwardTable = (MIB_IPFORWARDTABLE *)malloc(sizeof(MIB_IPFORWARDTABLE));
-	pIpForwardRow = (MIB_IPFORWARDROW *)malloc(sizeof(MIB_IPFORWARDROW));
-
+																					//ensure memory was allocated correctly
 	if (pIpForwardTable == NULL)
 	{
 		printf("Error allocating memory\n");
 		return;
 	}
 
+	//calls the API but we expect that it will fail since our size isnt big enough - this will put the correct size into the dwSize variable
 	if (GetIpForwardTable(pIpForwardTable, &dwSize, 0) == ERROR_INSUFFICIENT_BUFFER)
 	{
-		free(pIpForwardTable);
-		pIpForwardTable = (MIB_IPFORWARDTABLE *)malloc(dwSize);
-
+		free(pIpForwardTable);			//free the memory in the table so we can reallocate
+		pIpForwardTable = (MIB_IPFORWARDTABLE *)malloc(dwSize);			//reallocate memory with the correct size
+																		//ensure memory was correctly allocated
 		if (pIpForwardTable == NULL)
 		{
 			printf("Error allocating memory\n");
@@ -634,104 +638,42 @@ void getRoutes()
 	/* Note that the IPv4 addresses returned in
 	* GetIpForwardTable entries are in network byte order
 	*/
+	//as long as there is no errors loop through each row in the table
 	if ((dwRetVal = GetIpForwardTable(pIpForwardTable, &dwSize, 0)) == NO_ERROR)
 	{
-		for (i = 0; i < (int)pIpForwardTable->dwNumEntries; i++) {
+		for (int i = 0; i < (int)pIpForwardTable->dwNumEntries; i++) {
 
-			pIpForwardRow = &pIpForwardTable->table[i];
+			pIpForwardRow = &pIpForwardTable->table[i];				//sets the row to the iteration
 
 			char destIP[INET_ADDRSTRLEN];				//a string to store the destination address
 			char maskIP[INET_ADDRSTRLEN];			//a string to store the mask IP
-			char gatewayIP[INET_ADDRSTRLEN];
-			char interfaceIP[INET_ADDRSTRLEN];
+			char gatewayIP[INET_ADDRSTRLEN];			//a string to store the gateway/interfaceIP
 
+														//these functions convert the numeric byte entries for the IPs into strings
 			InetNtop(AF_INET, &pIpForwardRow->dwForwardDest, (PSTR)destIP, sizeof(destIP));
 			InetNtop(AF_INET, &pIpForwardRow->dwForwardMask, (PSTR)maskIP, sizeof(maskIP));
 			InetNtop(AF_INET, &pIpForwardRow->dwForwardNextHop, (PSTR)gatewayIP, sizeof(gatewayIP));
 
-
+			//print the destIP and Mask
 			std::cout << std::setw(25) << destIP;
 			std::cout << std::setw(25) << maskIP;
+			//on the first entry we know that it is the default gateway so were just gonna print it how it is (this is hacky I know)
 			if (i == 0)
 			{
 				std::cout << std::setw(25) << gatewayIP;
 				std::cout << std::setw(25) << pIpForwardRow->dwForwardIfIndex;
 			}
+			//for the rest of the entries were going to print the gateway as On-Link (this will need to be changed as we have multiple interfaces but for now it works)
+			//in the future i will need to compare the interface index to one gathered from the network adapter and then print the IP from that...
 			else
 			{
 				std::cout << std::setw(25) << "On-link" << std::setw(25) << gatewayIP;
 			}
 			std::cout << std::setw(25) << pIpForwardRow->dwForwardMetric1 << std::endl;
-
-
-			/*
-			//Windows has the ability to determine the protocol that was used to create the route. I feel like this could be very useful in the future knowing this information, however,
-			//This is not an inteded feature of the current project and due to time contraints I am not going to play around with this info.
-			printf("\tRoute[%d] Proto: %ld - ", i,
-			pIpForwardTable->table[i].dwForwardProto);
-			switch (pIpForwardTable->table[i].dwForwardProto) {
-			case MIB_IPPROTO_OTHER:
-			printf("other\n");
-			break;
-			case MIB_IPPROTO_LOCAL:
-			printf("local interface\n");
-			break;
-			case MIB_IPPROTO_NETMGMT:
-			printf("static route set through network management \n");
-			break;
-			case MIB_IPPROTO_ICMP:
-			printf("result of ICMP redirect\n");
-			break;
-			case MIB_IPPROTO_EGP:
-			printf("Exterior Gateway Protocol (EGP)\n");
-			break;
-			case MIB_IPPROTO_GGP:
-			printf("Gateway-to-Gateway Protocol (GGP)\n");
-			break;
-			case MIB_IPPROTO_HELLO:
-			printf("Hello protocol\n");
-			break;
-			case MIB_IPPROTO_RIP:
-			printf("Routing Information Protocol (RIP)\n");
-			break;
-			case MIB_IPPROTO_IS_IS:
-			printf
-			("Intermediate System-to-Intermediate System (IS-IS) protocol\n");
-			break;
-			case MIB_IPPROTO_ES_IS:
-			printf("End System-to-Intermediate System (ES-IS) protocol\n");
-			break;
-			case MIB_IPPROTO_CISCO:
-			printf("Cisco Interior Gateway Routing Protocol (IGRP)\n");
-			break;
-			case MIB_IPPROTO_BBN:
-			printf("BBN Internet Gateway Protocol (IGP) using SPF\n");
-			break;
-			case MIB_IPPROTO_OSPF:
-			printf("Open Shortest Path First (OSPF) protocol\n");
-			break;
-			case MIB_IPPROTO_BGP:
-			printf("Border Gateway Protocol (BGP)\n");
-			break;
-			case MIB_IPPROTO_NT_AUTOSTATIC:
-			printf("special Windows auto static route\n");
-			break;
-			case MIB_IPPROTO_NT_STATIC:
-			printf("special Windows static route\n");
-			break;
-			case MIB_IPPROTO_NT_STATIC_NON_DOD:
-			printf
-			("special Windows static route not based on Internet standards\n");
-			break;
-			default:
-			printf("UNKNOWN Proto value\n");
-			break;
-			}
-			*/
 		}
-		pIpForwardRow = NULL;
-		free(pIpForwardTable);
-		free(pIpForwardRow);
+		pIpForwardRow = NULL;			//NULL out the row so we can free
+		free(pIpForwardTable);			//free the table
+		free(pIpForwardRow);			//free the row
 		return;
 	}
 	else {
@@ -743,6 +685,7 @@ void getRoutes()
 	}
 };
 
+
 //gets info on the computer's memory.
 void getMemoryInfo()
 {
@@ -753,256 +696,71 @@ void getMemoryInfo()
 	GlobalMemoryStatusEx(&memStat);
 	std::cout << std::endl << "[+] Memory" << std::endl << std::endl;
 	std::cout << "Memory in use: " << memStat.dwMemoryLoad << "%" << std::endl;
-	std::cout << "Total physical memory: " << memStat.ullTotalPhys / DIV  << "GB" << std::endl;
-	std::cout << "Available physical memory: " << memStat.ullAvailPhys / DIV  << "GB" << std::endl;
+	std::cout << "Total physical memory: " << memStat.ullTotalPhys / DIV << "GB" << std::endl;
+	std::cout << "Available physical memory: " << memStat.ullAvailPhys / DIV << "GB" << std::endl;
 	std::cout << "Total virtual memory: " << memStat.ullTotalVirtual / DIV << "GB" << std::endl;
-	std::cout << "Available virtual memeory: " << memStat.ullAvailVirtual / DIV  << "GB" << std::endl;
+	std::cout << "Available virtual memeory: " << memStat.ullAvailVirtual / DIV << "GB" << std::endl;
 };
 
 void getHDDInfo()
 {
 	std::cout << std::endl << "[+] Hard Drive Space" << std::endl << std::endl;
+	outputfile << std::endl << "[+] Hard Drive Space" << std::endl << std::endl;
 	ULARGE_INTEGER p1, p2, p3;
 	GetDiskFreeSpaceEx(".", &p1, &p2, &p3);
-	printf("Total Bytes:   %llu", p2);
-	std::cout << std::endl;
-	printf("Free Bytes:   %llu", p3);
+	std::cout << "Total Space: " << p2.QuadPart / DIV << "GB" << std::endl;
+	outputfile << "Total Space: " << p2.QuadPart / DIV << "GB" << std::endl;
+	std::cout << "Free Space: " << p3.QuadPart / DIV << "GB" << std::endl;
+	outputfile << "Free Space: " << p3.QuadPart / DIV << "GB" << std::endl;
 }
-//gets the user accounts. This is a little more complicated than we expected. Due to time constraints, it is not implemented at this time.
-/*int getAccountInfo(LPWSTR userName)
+//Creates a snapshot of the processes running on the host and then prints each one out one by one. Uses the CreateToolhelp32Snapshot function and the OpenProcess API
+void getProcesses()
 {
-	DWORD dwLevel = 0;
-	LPUSER_INFO_0 pBuf = NULL;
-	LPUSER_INFO_1 pBuf1 = NULL;
-	LPUSER_INFO_2 pBuf2 = NULL;
-	LPUSER_INFO_3 pBuf3 = NULL;
-	LPUSER_INFO_4 pBuf4 = NULL;
-	LPUSER_INFO_10 pBuf10 = NULL;
-	LPUSER_INFO_11 pBuf11 = NULL;
-	LPUSER_INFO_20 pBuf20 = NULL;
-	LPUSER_INFO_23 pBuf23 = NULL;
+	HANDLE hProcessSnap;				//Handle on the process snapshot
+	HANDLE hProcess;					//handle on the current process being printed
+	PROCESSENTRY32 pe32;				//variable which stores the current process information
+	DWORD dwPriorityClass;				//priority class variable
 
-	NET_API_STATUS nStatus;
+	std::cout << std::endl << "[+] Processes" << std::endl;
+	outputfile << std::endl << "[+] Processes" << std::endl;
 
-	LPTSTR sStringSid = NULL;
-
-	int i = 0;
-	int j = 0;
-
-	if (argc != 3)
+	// Take a snapshot of all processes in the system.
+	hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (hProcessSnap == INVALID_HANDLE_VALUE)				//handles if the snapshot did not work
 	{
-		std::cout << stderr << "Usage: " << userName << "\\\\ServerName UserName" << std::endl;
-		exit(1);
+		std::cout << "Failure to snapshot processes" << std::endl;
+		outputfile << "Failure to snapshot processes" << std::endl;
+		return;
 	}
 
-	while (i < 24)
+	// Set the size of the structure before using it.
+	pe32.dwSize = sizeof(PROCESSENTRY32);
+
+	// Retrieve information about the first process,
+	// and exit if unsuccessful
+	if (!Process32First(hProcessSnap, &pe32))
 	{
-		// Call the NetUserGetInfo function.
-
-		dwLevel = i;
-
-		std::cout << "\nCalling NetUserGetInfo with Username=" << userName << " Level=" << dwLevel << std::endl;
-		nStatus = NetUserGetInfo(NULL, userName, dwLevel, (LPBYTE *)&pBuf);
-		
-		// If the call succeeds, print the user information.
-		
-		if (nStatus == NERR_Success)
-		{
-			if (pBuf != NULL)
-			{
-
-				switch (i)
-				{
-				case 0:
-					std::cout << "User account name: " << pBuf->usri0_name << std::endl;
-					break;
-				case 1:
-					pBuf1 = (LPUSER_INFO_1)pBuf;
-					std::cout << "User account name: " << pBuf1->usri1_name << std::endl;
-					std::cout << "\tPassword: " << pBuf1->usri1_password << std::endl;
-					std::cout << "\tPassword age (seconds): " << pBuf1->usri1_password_age << std::endl;
-					std::cout << "\tPrivilege level: " << pBuf1->usri1_priv << std::endl;
-					std::cout << "\tHome directory: " << pBuf1->usri1_home_dir << std::endl;
-					std::cout << "\tUser comment: " << pBuf1->usri1_comment << std::endl;
-					std::cout << "\tFlags (in hex): " << pBuf1->usri1_flags << std::endl;
-					std::cout << "\tScript path: " << pBuf1->usri1_script_path << std::endl;
-					break;
-				case 2:
-					pBuf2 = (LPUSER_INFO_2)pBuf;
-					std::cout << "User account name: " << pBuf2->usri2_name << std::endl;
-					std::cout << "\tPassword: " << pBuf2->usri2_password << std::endl;
-					std::cout << "\tPassword age (seconds): " << pBuf2->usri2_password_age << std::endl;
-					std::cout << "\tPrivilege level: " << pBuf2->usri2_priv << std::endl;
-					std::cout << "\tHome directory: " << pBuf2->usri2_home_dir << std::endl;
-					std::cout << "\tComment: " << pBuf2->usri2_comment << std::endl;
-					std::cout << "\tFlags (in hex): " << pBuf2->usri2_flags << std::endl;
-					std::cout << "\tScript path: " << pBuf2->usri2_script_path << std::endl;
-					std::cout << "\tAuth flags (in hex): " << pBuf2->usri2_auth_flags << std::endl;
-					std::cout << "\tFull name: " << pBuf2->usri2_full_name << std::endl;
-					std::cout << "\tUser comment: " << pBuf2->usri2_usr_comment << std::endl;
-					std::cout << "\tParameters: " << pBuf2->usri2_parms << std::endl;
-					std::cout << "\tWorkstations: " << pBuf2->usri2_workstations << std::endl;
-					std::cout << "\tLast logon (seconds since January 1, 1970 GMT: " << pBuf2->usri2_last_logon << std::endl;
-					std::cout << "\tLast logoff (seconds since January 1, 1970 GMT): " << pBuf2->usri2_last_logoff << std::endl;
-					std::cout << "\tAccount expires (seconds since January 1, 1970 GMT): " << pBuf2->usri2_acct_expires << std::endl;
-					std::cout << "\tMax storage: " << pBuf2->usri2_max_storage << std::endl;
-					std::cout << "\tUnits per week: " << pBuf2->usri2_units_per_week << std::endl;
-					std::cout << "\tLogon hours: ";
-					for (j = 0; j < 21; j++)
-					{
-						std::cout << (BYTE)pBuf2->usri2_logon_hours[j];
-					}
-					std::cout << std::endl;
-					std::cout << "\tBad password count: " << pBuf2->usri2_bad_pw_count << std::endl;
-					std::cout << "\tNumber of logons: " << pBuf2->usri2_num_logons << std::endl;
-					std::cout << "\tLogon server: " << pBuf2->usri2_logon_server << std::endl;
-					std::cout << "\tCountry code: " << pBuf2->usri2_country_code << std::endl;
-					std::cout << "\tCode page: " << pBuf2->usri2_code_page << std::endl;
-					break;
-				case 4:
-					pBuf4 = (LPUSER_INFO_4)pBuf;
-					std::cout << "\tUser account name: " << pBuf4->usri4_name << std::endl;
-					std::cout << "\tPassword: " << pBuf4->usri4_password << std::endl;
-					std::cout << "\tPrivilege level: " << pBuf4->usri4_priv << std::endl;
-					std::cout << "\tHome directory: " << pBuf4->usri4_home_dir << std::endl;
-					std::cout << "\tComment: " << pBuf4->usri4_comment << std::endl;
-					std::cout << "\tFlags (in hex): " << pBuf4->usri4_flags << std::endl;
-					std::cout << "\tScript path: " << pBuf4->usri4_script_path << std::endl;
-					std::cout << "\tAuth flags (in hex): " << pBuf4->usri4_auth_flags << std::endl;
-					std::cout << "\tFull name: " << pBuf4->usri4_full_name << std::endl;
-					std::cout << "\tUser comment: " << pBuf4->usri4_usr_comment << std::endl;
-					std::cout << "\tParameters: " << pBuf4->usri4_parms << std::endl;
-					std::cout << "\tWorkstations: " << pBuf4->usri4_workstations << std::endl;
-					std::cout << "\tLast logon (seconds sinc January 1, 1970 GMT: " << pBuf4->usri4_last_logon << std::endl;
-					std::cout << "\tLast logoff (seconds since January 1, 1970 GMT: " << pBuf4->usri4_last_logoff << std::endl;
-					std::cout << "\tAccount expires (seconds since January 1, 1970 GMT: " << pBuf4->usri4_acct_expires << std::endl;
-					std::cout << "\tMax storage: " << pBuf4->usri4_max_storage << std::endl;
-					std::cout << "\tUnits per week: " << pBuf4->usri4_units_per_week << std::endl;
-					std::cout << "\tLogon hours: ";
-					for (j = 0; j < 21; j++)
-					{
-						std::cout << (BYTE)pBuf4->usri4_logon_hours[j];
-					}
-					std::cout << std::endl;
-					std::cout << "\tBad password count: " << pBuf4->usri4_bad_pw_count << std::endl;
-					std::cout << "\tNumber of logons: " << pBuf4->usri4_num_logons << std::endl;
-					std::cout << "\tLogon server: " << pBuf4->usri4_logon_server << std::endl;
-					std::cout << "\tCountry code: " << pBuf4->usri4_country_code << std::endl;
-					std::cout << "\tCode page: " << pBuf4->usri4_code_page << std::endl;
-					if (ConvertSidToStringSid
-					(pBuf4->usri4_user_sid, &sStringSid))
-					{
-						std::cout << "\tUser SID: " << sStringSid << std::endl;
-						LocalFree(sStringSid);
-					}
-					else
-					{
-						std::cout << "ConvertSidToStringSid failed with error " << GetLastError() << std::endl;
-					}
-					std::cout << "\tPrimary group ID: " << pBuf4->usri4_primary_group_id << std::endl;
-					std::cout << "\tProfile: " << pBuf4->usri4_profile << std::endl;
-					std::cout << "\tHome directory drive letter: " << pBuf4->usri4_home_dir_drive << std::endl;
-					std::cout << "\tPassword expired information: " << pBuf4->usri4_password_expired << std::endl;
-					break;
-				case 10:
-					pBuf10 = (LPUSER_INFO_10)pBuf;
-					std::cout << "\tUser account name: " << pBuf10->usri10_name << std::endl;
-					std::cout << "\tComment: " << pBuf10->usri10_comment << std::endl;
-					std::cout << "\tUser comment: " << pBuf10->usri10_usr_comment << std::endl;
-					std::cout << "\tFull name: " << pBuf10->usri10_full_name << std::endl;
-					break;
-				case 11:
-					pBuf11 = (LPUSER_INFO_11)pBuf;
-					std::cout << "\tUser account name: " << pBuf11->usri11_name << std::endl;
-					std::cout << "\tComment: " << pBuf11->usri11_comment << std::endl;
-					std::cout << "\tUser comment: " << pBuf11->usri11_usr_comment << std::endl;
-					std::cout << "\tFull name: " << pBuf11->usri11_full_name << std::endl;
-					std::cout << "\tPrivilege level: " << pBuf11->usri11_priv << std::endl;
-					std::cout << "\tAuth flags (in hex): " << pBuf11->usri11_auth_flags << std::endl;
-					std::cout << "\tPassword age (seconds): " << pBuf11->usri11_password_age << std::endl;
-					std::cout << "\tHome directory: " << pBuf11->usri11_home_dir << std::endl;
-					std::cout << "\tParameters: " << pBuf11->usri11_parms << std::endl;
-					std::cout << "\tLast logon (seconds since January 1, 1970 GMT: " << pBuf11->usri11_last_logon << std::endl;
-					std::cout << "\tLast logoff (seconds since January 1, 1970 GMT): " << pBuf11->usri11_last_logoff << std::endl;
-					std::cout << "\tBad password count: " << pBuf11->usri11_bad_pw_count << std::endl;
-					std::cout << "\tNumber of logons: " << pBuf11->usri11_num_logons << std::endl;
-					std::cout << "\tLogon server: " << pBuf11->usri11_logon_server << std::endl;
-					std::cout << "\tCountry code: " << pBuf11->usri11_country_code << std::endl;
-					std::cout << "\tWorkstations: " << pBuf11->usri11_workstations << std::endl;
-					std::cout << "\tMax storage: " << pBuf11->usri11_max_storage << std::endl;
-					std::cout << "\tUnits per week: " << pBuf11->usri11_units_per_week << std::endl;
-					wprintf(L"\tLogon hours:");
-					std::cout << "\tLogon hours: ";
-					for (j = 0; j < 21; j++)
-					{
-						std::cout << (BYTE)pBuf11->usri11_logon_hours[j];
-					}
-					std::cout << std::endl;
-					std::cout << "\tCode page " << pBuf11->usri11_code_page << std::endl;
-					break;
-				case 20:
-					pBuf20 = (LPUSER_INFO_20)pBuf;
-					std::cout << "\tUser account name: " << pBuf20->usri20_name << std::endl;
-					std::cout << "\tFull name: " << pBuf20->usri20_full_name << std::endl;
-					std::cout << "\tComment: " << pBuf20->usri20_comment << std::endl;
-					std::cout << "\tFlags (in hex): " << pBuf20->usri20_flags << std::endl;
-					std::cout << "\tUser ID: " << pBuf20->usri20_user_id << std::endl;
-					break;
-				case 23:
-					pBuf23 = (LPUSER_INFO_23)pBuf;
-					std::cout << "\tUser account name: " << pBuf23->usri23_name << std::endl;
-					std::cout << "\tFull name: " << pBuf23->usri23_full_name << std::endl;
-					std::cout << "\tComment: " << pBuf23->usri23_comment << std::endl;
-					std::cout << "\tFlags (in hex): " << pBuf23->usri23_flags << std::endl;
-					if (ConvertSidToStringSid
-					(pBuf23 -> usri23_user_sid, &sStringSid))
-					{
-						std::cout << "\tUser SID: " << sStringSid << std::endl;
-						LocalFree(sStringSid);
-					}
-					else
-					{
-						std::cout << "ConvertSidToStringSid failed with error: " << GetLastError() << std::endl;
-					}
-					break;
-				default:
-					break;
-				}
-			}
-		}
-		// Otherwise, print the system error.
-		//
-		else
-			std::cout << stderr << "NetUserGetInfo failed with error: " << nStatus << std::endl;
-		//
-		// Free the allocated memory.
-		//
-		if (pBuf != NULL)
-			NetApiBufferFree(pBuf);
-
-		switch (i)
-		{
-		case 0:
-		case 1:
-		case 10:
-			i++;
-			break;
-		case 2:
-			i = 4;
-			break;
-		case 4:
-			i = 10;
-			break;
-		case 11:
-			i = 20;
-			break;
-		case 20:
-			i = 23;
-			break;
-		default:
-			i = 24;
-			break;
-		}
+		CloseHandle(hProcessSnap);          // clean the snapshot object
+		return;
 	}
-	return 1;
-}*/
+
+	// Now walk the snapshot of processes, and
+	// display information about each process in turn
+	do
+	{
+		std::cout << std::endl << std::endl << "=====================================================" << std::endl;
+		outputfile << std::endl << std::endl << "=====================================================" << std::endl;
+		std::cout << std::endl << "PROCESS NAME: " << pe32.szExeFile << std::endl;
+		outputfile << std::endl << "PROCESS NAME: " << pe32.szExeFile << std::endl;
+		std::cout << std::endl << "------------------------------------------------------" << std::endl;
+		outputfile << std::endl << "------------------------------------------------------" << std::endl;
+		std::cout << std::endl << "  Process ID: " << pe32.th32ProcessID << std::endl;
+		outputfile << std::endl << "  Process ID: " << pe32.th32ProcessID << std::endl;
+		std::cout << std::endl << "  Parent process ID: " << pe32.th32ParentProcessID << std::endl;
+		outputfile << std::endl << "  Parent process ID: " << pe32.th32ParentProcessID << std::endl;
+
+	} while (Process32Next(hProcessSnap, &pe32));
+
+	CloseHandle(hProcessSnap);
+	return;
+};

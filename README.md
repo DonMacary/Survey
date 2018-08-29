@@ -1,5 +1,5 @@
 # **Windows Survey**
-This program is intended to be a windows post-exploitation tool to scout the target Windows operating system via API calls. The program will gather the information from the operating system and will output it to a google protobuff for an easy to read format.
+This program is intended to be a windows post-exploitation tool to scout the target Windows operating system via API calls. The program will gather the information from the operating system and will output it to a file (eventually using google protobuff for easily transferable data)
 
 **Proposed project timeline:** (remove from final)
 
@@ -10,17 +10,19 @@ This program is intended to be a windows post-exploitation tool to scout the tar
 
 **The program will (hopefully) incorporate the following functions:**
 
-    get-systeminfo
-    get-interactivelogons
+	getSystemInfo();
+	getUserName();
+	getNetworkInfo();
+	getNetstat();
+	getRoutes();
+    getProcesses();
+
+OPTIONAL
     get-lastlogin
-    get-networkinfo
-    get-processes
     get-antivirus
-    get-netstat
-    get-routes
     get-hotfixes
 
-get-systeminfo
+getSystemInfo();
 
     get-systeminfo will gather basic system information. (Hardware/OS Info)
         OS Name 
@@ -38,25 +40,37 @@ get-interactivelogons
 
     get-interactivelogons will get information about which users are interactively logged on to the system
 
-get-lastlogin
+getUserName()
 
-    get-lastlogin will get information about the last logged on user
+    getUserName() will get information about which user is interactively logged on to the system using the GetUserNameEx API
 
-get-networkinfo
+getNetworkInfo()
 
-    get-networkinfo will get information about the network adapters the host has using the GetAapterInfo API.
+    getNetworkInfo() will get information about the network adapters the host has using the GetAapterInfo API.
 
 get-processes
 
     get-procceses will report the running proccesses on the host. Further implementations will only gather processes created in the last hour, processes without a service etc...
 
-get-netstat
+getNetstat()
 
-    get-netstat will report all the network connections the host has.
+    getNetstat() will report all the network connections the host has.
 
-get-routes
+getRoutes()
 
-    get-routes will report any routes the host has.
+    getRoutes() will report any routes the host has.
 
+getMemoryInfo();
 
-Obviously this has the potential to be a lot of data. I would like to add functionality to format the output file to cleanly organize the host information for analysis. Possible output to csv for import into excel with separate pages for each function.      
+    gets info on the computer's memory.
+
+getProcesses();
+
+	get-procceses will report the running proccesses on the host. Further implementations will only gather processes created in the last hour, processes without a service etc...
+
+OPTIONAL FUNCTIONS
+get-lastlogin
+
+    get-lastlogin will get information about the last logged on user
+
+    
