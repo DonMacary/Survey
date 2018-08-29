@@ -49,6 +49,7 @@ int main(void)
 	getNetstat(outputfile);
 	getRoutes(outputfile);
 	getMemoryInfo(outputfile);
+	getHDDInfo(outputfile);
 	getProcesses(outputfile);
 	outputfile.close();
 	getchar();

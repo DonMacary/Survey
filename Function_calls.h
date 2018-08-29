@@ -37,6 +37,7 @@
 #include <tchar.h>
 #include <fstream>
 
+
 void getSysName(std::ofstream &outputfile);
 void getOSInfo(std::ofstream &outputfile);
 void getArchitecture(std::ofstream &outputfile);
@@ -49,6 +50,7 @@ void getUserName(std::ofstream &outputfile);
 void getNetstat(std::ofstream &outputfile);
 void getRoutes(std::ofstream &outputfile);
 void getMemoryInfo(std::ofstream &outputfile);
+void getHDDInfo();
 void getProcesses(std::ofstream &outputfile);
 
 
@@ -806,6 +808,17 @@ void getMemoryInfo(std::ofstream &outputfile)
 	outputfile << "Available virtual memeory: " << memStat.ullAvailVirtual / DIV << "GB" << std::endl;
 };
 
+void getHDDInfo()
+{
+	std::cout << std::endl << "[+] Hard Drive Space" << std::endl << std::endl;
+	outputfile << std::endl << "[+] Hard Drive Space" << std::endl << std::endl;
+	ULARGE_INTEGER p1, p2, p3;
+	GetDiskFreeSpaceEx(".", &p1, &p2, &p3);
+	std::cout << "Total Space: " << p2.QuadPart / DIV << "GB" << std::endl;
+	outputfile << "Total Space: " << p2.QuadPart / DIV << "GB" << std::endl;
+	std::cout << "Free Space: " << p3.QuadPart / DIV << "GB" << std::endl;
+	outputfile << "Free Space: " << p3.QuadPart / DIV << "GB" << std::endl;
+}
 //Creates a snapshot of the processes running on the host and then prints each one out one by one. Uses the CreateToolhelp32Snapshot function and the OpenProcess API
 void getProcesses(std::ofstream &outputfile)
 {
@@ -815,12 +828,14 @@ void getProcesses(std::ofstream &outputfile)
 	DWORD dwPriorityClass;				//priority class variable
 
 	std::cout << std::endl << "[+] Processes" << std::endl;
+	outputfile << std::endl << "[+] Processes" << std::endl;
 
 	// Take a snapshot of all processes in the system.
 	hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 	if (hProcessSnap == INVALID_HANDLE_VALUE)				//handles if the snapshot did not work
 	{
 		std::cout << "Failure to snapshot processes" << std::endl;
+		outputfile << "Failure to snapshot processes" << std::endl;
 		return;
 	}
 
@@ -840,10 +855,15 @@ void getProcesses(std::ofstream &outputfile)
 	do
 	{
 		std::cout << std::endl << std::endl << "=====================================================" << std::endl;
+		outputfile << std::endl << std::endl << "=====================================================" << std::endl;
 		std::cout << std::endl << "PROCESS NAME: " << pe32.szExeFile << std::endl;
+		outputfile << std::endl << "PROCESS NAME: " << pe32.szExeFile << std::endl;
 		std::cout << std::endl << "------------------------------------------------------" << std::endl;
+		outputfile << std::endl << "------------------------------------------------------" << std::endl;
 		std::cout << std::endl << "  Process ID: " << pe32.th32ProcessID << std::endl;
+		outputfile << std::endl << "  Process ID: " << pe32.th32ProcessID << std::endl;
 		std::cout << std::endl << "  Parent process ID: " << pe32.th32ParentProcessID << std::endl;
+		outputfile << std::endl << "  Parent process ID: " << pe32.th32ParentProcessID << std::endl;
 
 	} while (Process32Next(hProcessSnap, &pe32));
 
