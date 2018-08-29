@@ -29,8 +29,8 @@
 /			gets the HDD's total space and space available.
 /		getProcesses();
 /			get-procceses will report the running proccesses on the host. Further implementations will only gather processes created in the last hour, processes without a service etc...
-/		getPowerStatus();
-/			gets status on the computer's battery if it has one.
+/		getBIOS();
+/			gets some basic data from the BIOS.
 **********************************************************************************************************************/
 #define WIN32_LEAN_AND_MEAN
 

@@ -13,6 +13,7 @@ This program is intended to be a windows post-exploitation tool to scout the tar
     getProcesses();
 	getMemoryInfo();
 	getHDDInfo();
+	getBIOS();
 
 OPTIONAL
     get-lastlogin
@@ -65,6 +66,10 @@ getHDDInfo();
 getProcesses();
 
 	get-procceses will report the running proccesses on the host. Further implementations will only gather processes created in the last hour, processes without a service etc...
+
+getBIOS();
+	
+	gets some basic data from the BIOS.
 
 OPTIONAL FUNCTIONS
 get-lastlogin
