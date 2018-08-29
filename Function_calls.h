@@ -12,6 +12,7 @@
 #define MALLOC(x) HeapAlloc(GetProcessHeap(), 0, (x))
 #define FREE(x) HeapFree(GetProcessHeap(), 0, (x))
 #define DIV 1073741824
+#define BATDIV 60
 
 
 
@@ -52,6 +53,7 @@ void getRoutes(std::ofstream &outputfile);
 void getMemoryInfo(std::ofstream &outputfile);
 void getHDDInfo(std::ofstream &outputfile);
 void getProcesses(std::ofstream &outputfile);
+void getBIOS(std::ofstream &outputfile);
 
 
 
@@ -870,3 +872,26 @@ void getProcesses(std::ofstream &outputfile)
 	CloseHandle(hProcessSnap);
 	return;
 };
+void getBIOS(std::ofstream &outputfile)
+{
+	typedef struct RAW_SMBIOS_DATA
+	{
+		BYTE    Used20CallingMethod;
+		BYTE    MajorVersion;
+		BYTE    MinorVersion;
+		BYTE    Revision;
+		DWORD   Length;
+		BYTE    SMBIOSTableData[];
+	} RawSmbiosData;
+
+	BYTE buffer[0x4000];
+	RawSmbiosData *pData = (RawSmbiosData *)buffer;
+
+	if (sizeof(buffer) > GetSystemFirmwareTable('RSMB', 0, buffer, sizeof(buffer))) {
+		int major = pData->MajorVersion;
+		int minor = pData->MinorVersion;
+		std::cout << "SMBios Version: " << major << "." << minor << std::endl;
+		std::cout << "SMBios Table Length: " << pData->Length << " bytes" << std::endl;
+	}
+}
+
