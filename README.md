@@ -11,6 +11,8 @@ This program is intended to be a windows post-exploitation tool to scout the tar
 	getNetstat();
 	getRoutes();
     getProcesses();
+	getMemoryInfo();
+	getHDDInfo();
 
 OPTIONAL
     get-lastlogin
@@ -31,9 +33,6 @@ getSystemInfo();
         Local Time
         Last Boot time
 
-get-interactivelogons
-
-    get-interactivelogons will get information about which users are interactively logged on to the system
 
 getUserName()
 
@@ -58,6 +57,10 @@ getRoutes()
 getMemoryInfo();
 
     gets info on the computer's memory.
+
+getHDDInfo();
+
+	gets the computer's HDD total space and available space.
 
 getProcesses();
 
