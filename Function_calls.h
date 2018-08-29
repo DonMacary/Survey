@@ -50,7 +50,7 @@ void getUserName(std::ofstream &outputfile);
 void getNetstat(std::ofstream &outputfile);
 void getRoutes(std::ofstream &outputfile);
 void getMemoryInfo(std::ofstream &outputfile);
-void getHDDInfo();
+void getHDDInfo(std::ofstream &outputfile);
 void getProcesses(std::ofstream &outputfile);
 
 
@@ -300,7 +300,7 @@ void getOSInfo(std::ofstream &outputfile)
 		}
 		else
 		{
-			std::cout << "Windows 8" << std::endl; 
+			std::cout << "Windows 8" << std::endl;
 			outputfile << "Windows 8" << std::endl;
 		}
 		break;
@@ -342,7 +342,7 @@ void getOSInfo(std::ofstream &outputfile)
 void getArchitecture(std::ofstream &outputfile)
 {
 	std::cout << "Architecture: ";
-	std::cout << "Architecture: ";
+	outputfile << "Architecture: ";
 	SYSTEM_INFO sys;
 	GetNativeSystemInfo(&sys);
 	//checks the SYSTEM_INFO object processor architecture parameter against a list of known values. These values were found on Microsofts Webstie:
@@ -527,7 +527,7 @@ void getNetworkInfo(std::ofstream &outputfile)
 		outputfile << "\tIP Mask: " << pAdapter->IpAddressList.IpMask.String << std::endl;
 		std::cout << "\tGateway: " << pAdapter->GatewayList.IpAddress.String << std::endl;			//displays the gateway
 		outputfile << "\tGateway: " << pAdapter->GatewayList.IpAddress.String << std::endl;
-																									//checks if dhcp is enabled, if so state so and if it can find the dhcp server address, report it.
+		//checks if dhcp is enabled, if so state so and if it can find the dhcp server address, report it.
 		if (pAdapter->DhcpEnabled)
 		{
 			std::cout << "\tDHCP Enabled: Yes" << std::endl;
@@ -808,7 +808,7 @@ void getMemoryInfo(std::ofstream &outputfile)
 	outputfile << "Available virtual memeory: " << memStat.ullAvailVirtual / DIV << "GB" << std::endl;
 };
 
-void getHDDInfo()
+void getHDDInfo(std::ofstream &outputfile)
 {
 	std::cout << std::endl << "[+] Hard Drive Space" << std::endl << std::endl;
 	outputfile << std::endl << "[+] Hard Drive Space" << std::endl << std::endl;
