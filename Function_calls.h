@@ -35,25 +35,26 @@
 #include <psapi.h>
 #include <tlhelp32.h>
 #include <tchar.h>
+#include <fstream>
 
-void getSysName();
-void getOSInfo();
-void getArchitecture();
-void getWindowsPath();
-void getSystemPath();
-void getTime();
-void getSystemInfo();
-void getNetworkInfo();
-void getUserName();
-void getNetstat();
-void getRoutes();
-void getMemoryInfo();
-void getProcesses();
+void getSysName(std::ofstream &outputfile);
+void getOSInfo(std::ofstream &outputfile);
+void getArchitecture(std::ofstream &outputfile);
+void getWindowsPath(std::ofstream &outputfile);
+void getSystemPath(std::ofstream &outputfile);
+void getTime(std::ofstream &outputfile);
+void getSystemInfo(std::ofstream &outputfile);
+void getNetworkInfo(std::ofstream &outputfile);
+void getUserName(std::ofstream &outputfile);
+void getNetstat(std::ofstream &outputfile);
+void getRoutes(std::ofstream &outputfile);
+void getMemoryInfo(std::ofstream &outputfile);
+void getProcesses(std::ofstream &outputfile);
 
 
 
 //Uses GetComputerNameEX API to gather the FQDN, Hostname and Domain Name from the system
-void getSysName()
+void getSysName(std::ofstream &outputfile)
 {
 
 	TCHAR buffer[256] = TEXT(""); //Variable to store the name
@@ -62,20 +63,24 @@ void getSysName()
 	if (!GetComputerNameEx(ComputerNameDnsFullyQualified, buffer, &dwSize)) // grabs the FQDN
 	{
 		std::cout << "Get FQDN failed" << std::endl;
+		outputfile << "Get FQDN failed" << std::endl;
 	}
 	else
 	{
 		std::cout << "FQDN: " << buffer << std::endl;			//print it out
+		outputfile << "FQDN: " << buffer << std::endl;
 	}
 	ZeroMemory(buffer, dwSize);				//empty the string  and the size
 
 	if (!GetComputerNameEx(ComputerNameDnsHostname, buffer, &dwSize))		//grabs the hostname
 	{
 		std::cout << "Get Hostname failed" << std::endl;
+		outputfile << "Get Hostname failed" << std::endl;
 	}
 	else
 	{
 		std::cout << "Hostname: " << buffer << std::endl;		//prints it out
+		outputfile << "Hostname: " << buffer << std::endl;
 	}
 
 	ZeroMemory(buffer, dwSize);				 //empty the string  and the size
@@ -83,10 +88,12 @@ void getSysName()
 	if (!GetComputerNameEx(ComputerNameDnsDomain, buffer, &dwSize))		//grabs the domain name
 	{
 		std::cout << "Get Domain name failed" << std::endl;
+		outputfile << "Get Domain name failed" << std::endl;
 	}
 	else
 	{
 		std::cout << "Domain Name: " << buffer << std::endl;	//prints it out
+		outputfile << "Domain Name: " << buffer << std::endl;
 	}
 
 	ZeroMemory(buffer, dwSize);				 //empty the string  and the size
@@ -94,13 +101,14 @@ void getSysName()
 };
 
 //This function uses the Version Helpers API to check the Operating system version. See README for details on why this method was used vs others.
-void getOSInfo()
+void getOSInfo(std::ofstream &outputfile)
 {
 	//Since the helper functions only report if the system is that version or greater, An iterator is needed to keep track of all the tests the system has returned true for.
 	//The versions are checked in ascending order to make this possible. 
 	int i = 0;			//iterator to count which version of windows
 	bool server = false;
 	std::cout << "OS Name: ";
+	outputfile << "OS Name: ";
 	if (IsWindowsXPOrGreater())
 	{
 		i++;
@@ -170,16 +178,19 @@ void getOSInfo()
 	{
 	case 0:
 		std::cout << "PreWindows XP" << std::endl;
+		outputfile << "PreWindows XP" << std::endl;
 		break;
 	case 1:
 		//It is difficult to differentiate all the server versions, therefor I just report the generation of server (and not R2 etc...)
 		if (server == true)
 		{
 			std::cout << "Windows Server 2000" << std::endl;
+			outputfile << "Windows Server 2000" << std::endl;
 		}
 		else
 		{
 			std::cout << "Windows XP" << std::endl;
+			outputfile << "Windows XP" << std::endl;
 		}
 
 		break;
@@ -187,100 +198,120 @@ void getOSInfo()
 		if (server == true)
 		{
 			std::cout << "Windows Server 2000" << std::endl;
+			outputfile << "Windows Server 2000" << std::endl;
 		}
 		else
 		{
 			std::cout << "Windows XP Service Pack 1" << std::endl;
+			outputfile << "Windows XP Service Pack 1" << std::endl;
 		}
 		break;
 	case 3:
 		if (server == true)
 		{
 			std::cout << "Windows Server 2000" << std::endl;
+			outputfile << "Windows Server 2000" << std::endl;
 		}
 		else
 		{
 			std::cout << "Windows XP Service Pack 2" << std::endl;
+			outputfile << "Windows XP Service Pack 2" << std::endl;
 		}
 		break;
 	case 4:
 		if (server == true)
 		{
 			std::cout << "Windows Server 2000" << std::endl;
+			outputfile << "Windows Server 2000" << std::endl;
 		}
 		else
 		{
 			std::cout << "Windows XP Service Pack 3" << std::endl;
+			outputfile << "Windows XP Service Pack 3" << std::endl;
 		}
 		break;
 	case 5:
 		if (server == true)
 		{
 			std::cout << "Windows Server 2003" << std::endl;
+			outputfile << "Windows Server 2003" << std::endl;
 		}
 		else
 		{
 			std::cout << "Windows Vista" << std::endl;
+			outputfile << "Windows Vista" << std::endl;
 		}
 		break;
 	case 6:
 		if (server == true)
 		{
 			std::cout << "Windows Server 2003" << std::endl;
+			outputfile << "Windows Server 2003" << std::endl;
 		}
 		else
 		{
 			std::cout << "Windows Vista Service Pack 1" << std::endl;
+			outputfile << "Windows Vista Service Pack 1" << std::endl;
 		}
 		break;
 	case 7:
 		if (server == true)
 		{
 			std::cout << "Windows Server 2003" << std::endl;
+			outputfile << "Windows Server 2003" << std::endl;
 		}
 		else
 		{
 			std::cout << "Windows Vista Service Pack 2" << std::endl;
+			outputfile << "Windows Vista Service Pack 2" << std::endl;
 		}
 		break;
 	case 8:
 		if (server == true)
 		{
 			std::cout << "Windows Server 2008" << std::endl;
+			outputfile << "Windows Server 2008" << std::endl;
 		}
 		else
 		{
 			std::cout << "Windows 7" << std::endl;
+			outputfile << "Windows 7" << std::endl;
 		}
 		break;
 	case 9:
 		if (server == true)
 		{
 			std::cout << "Windows Server 2008" << std::endl;
+			outputfile << "Windows Server 2008" << std::endl;
 		}
 		else
 		{
 			std::cout << "Windows 7 Service Pack 1" << std::endl;
+			outputfile << "Windows 7 Service Pack 1" << std::endl;
 		}
 		break;
 	case 10:
 		if (server == true)
 		{
 			std::cout << "Windows Server 2012" << std::endl;
+			outputfile << "Windows Server 2012" << std::endl;
 		}
 		else
 		{
-			std::cout << "Windows 8" << std::endl;
+			std::cout << "Windows 8" << std::endl; 
+			outputfile << "Windows 8" << std::endl;
 		}
 		break;
 	case 11:
 		if (server == true)
 		{
 			std::cout << "Windows Server 2012" << std::endl;
+			outputfile << "Windows Server 2012" << std::endl;
 		}
 		else
 		{
 			std::cout << "Windows 8.1" << std::endl;
+			outputfile << "Windows 8.1" << std::endl;
 		}
 
 		break;
@@ -288,23 +319,27 @@ void getOSInfo()
 		if (server == true)
 		{
 			std::cout << "Windows Server 2016" << std::endl;
+			outputfile << "Windows Server 2016" << std::endl;
 		}
 		else
 		{
 			std::cout << "Windows 10" << std::endl;
+			outputfile << "Windows 10" << std::endl;
 		}
 
 		break;
 	default:
 		std::cout << "Unknown Version" << std::endl;
+		outputfile << "Unknown Version" << std::endl;
 		break;
 	}
 
 };
 
 //gathers natvie system information and then checks the processor architecture and reports it. Uses the GetNativeSystemInfo API. 
-void getArchitecture()
+void getArchitecture(std::ofstream &outputfile)
 {
+	std::cout << "Architecture: ";
 	std::cout << "Architecture: ";
 	SYSTEM_INFO sys;
 	GetNativeSystemInfo(&sys);
@@ -314,21 +349,27 @@ void getArchitecture()
 	{
 	case 0:
 		std::cout << "x86" << std::endl;
+		outputfile << "x86" << std::endl;
 		break;
 	case 5:
 		std::cout << "ARM" << std::endl;
+		outputfile << "ARM" << std::endl;
 		break;
 	case 6:
 		std::cout << "Intel Itanium-based" << std::endl;
+		outputfile << "Intel Itanium-based" << std::endl;
 		break;
 	case 9:
 		std::cout << "x64" << std::endl;
+		outputfile << "x64" << std::endl;
 		break;
 	case 12:
 		std::cout << "ARM64" << std::endl;
+		outputfile << "ARM64" << std::endl;
 		break;
 	default:
 		std::cout << "Unknown" << std::endl;
+		outputfile << "Unknown" << std::endl;
 		break;
 	}
 
@@ -336,7 +377,7 @@ void getArchitecture()
 
 
 //prints the path to the windows directory (most of the time this will be C:\Windows...) This uses the GetWindowsDirectory API. 
-void getWindowsPath()
+void getWindowsPath(std::ofstream &outputfile)
 {
 	TCHAR PATH[256] = TEXT("");		//variable to store the path
 	DWORD size = sizeof(PATH);		//size of the path variable 
@@ -346,21 +387,24 @@ void getWindowsPath()
 	if (results == 0)
 	{
 		std::cout << "Windows Directory Path: Failed to find" << std::endl;
+		outputfile << "Windows Directory Path: Failed to find" << std::endl;
 	}
 	//if the result is = the size of the path variable then it means that the path is too long to print (we would need to increase the path buffer)
 	else if (results == size)
 	{
 		std::cout << "Windows Directory Path: Path is too large to print" << std::endl;
+		outputfile << "Windows Directory Path: Path is too large to print" << std::endl;
 	}
 	//otherwise were successful so print the path!
 	else
 	{
 		std::cout << "Windows Directory Path: " << PATH << std::endl;
+		outputfile << "Windows Directory Path: " << PATH << std::endl;
 	}
 };
 
 //prints the path to the system directory (C:\Windows\System32 usually..) Uses the GetSystemDirectory API
-void getSystemPath()
+void getSystemPath(std::ofstream &outputfile)
 {
 	TCHAR PATH[256] = TEXT("");		//variable to store the path
 	DWORD size = sizeof(PATH);		//size of the path variable 
@@ -369,22 +413,25 @@ void getSystemPath()
 	if (results == 0)
 	{
 		std::cout << "Windows System Path: Failed to find" << std::endl;
+		outputfile << "Windows System Path: Failed to find" << std::endl;
 	}
 	//if the result is = the size of the path variable then it means that the path is too long to print (we would need to increase the path buffer)
 	else if (results == size)
 	{
 		std::cout << "Windows System Path: Path is too large to print" << std::endl;
+		outputfile << "Windows System Path: Path is too large to print" << std::endl;
 	}
 	//otherwise were successful so print the path!
 	else
 	{
 		std::cout << "Windows System Path: " << PATH << std::endl;
+		outputfile << "Windows System Path: " << PATH << std::endl;
 	}
 
 };
 
 //utilizes the GetLocalTime and GetSystemTime APIs to report the local and system time of the host. 
-void getTime()
+void getTime(std::ofstream &outputfile)
 {
 	SYSTEMTIME localtime;			//local time variable
 	SYSTEMTIME systime;				//system time (UTC) variable
@@ -392,29 +439,35 @@ void getTime()
 	GetSystemTime(&systime);		//API to get the system time
 	std::cout << "Local Time: " << localtime.wMonth << "/" << localtime.wDay << "/" << localtime.wYear << " " << localtime.wHour << ":" << localtime.wMinute
 		<< ":" << localtime.wSecond << std::endl;
+	outputfile << "Local Time: " << localtime.wMonth << "/" << localtime.wDay << "/" << localtime.wYear << " " << localtime.wHour << ":" << localtime.wMinute
+		<< ":" << localtime.wSecond << std::endl;
 	std::cout << "System Time: " << systime.wMonth << "/" << systime.wDay << "/" << systime.wYear << " " << systime.wHour << ":" << systime.wMinute
+		<< ":" << systime.wSecond << std::endl;
+	outputfile << "System Time: " << systime.wMonth << "/" << systime.wDay << "/" << systime.wYear << " " << systime.wHour << ":" << systime.wMinute
 		<< ":" << systime.wSecond << std::endl;
 
 };
 
 //main function to report Target's system information. This is called in main. 
-void getSystemInfo()
+void getSystemInfo(std::ofstream &outputfile)
 {
 	std::cout << "[+] System Information" << std::endl << std::endl;
+	outputfile << "[+] System Information" << std::endl << std::endl;
 
-	getOSInfo();			//reports the operating system name
-	getArchitecture();		//reports the system architecture type 
-	getSysName();			//reports the System hostname, FQDN and Domain Name
-	getWindowsPath();		//reports the Windows directory path
-	getSystemPath();		//reports the System directory path
-	getTime();				//reports thte Local and System time
+	getOSInfo(outputfile);			//reports the operating system name
+	getArchitecture(outputfile);		//reports the system architecture type 
+	getSysName(outputfile);			//reports the System hostname, FQDN and Domain Name
+	getWindowsPath(outputfile);		//reports the Windows directory path
+	getSystemPath(outputfile);		//reports the System directory path
+	getTime(outputfile);				//reports thte Local and System time
 
 };
 
 //gets the username of the currently logged in user using the GetUserNameEx API
-void getUserName()
+void getUserName(std::ofstream &outputfile)
 {
 	std::cout << std::endl << "[+] User Name" << std::endl << std::endl;
+	outputfile << std::endl << "[+] User Name" << std::endl << std::endl;
 	TCHAR buffer[256] = TEXT("");
 	DWORD buffer_size = sizeof(buffer);
 	LPDWORD nSize = &buffer_size;
@@ -422,6 +475,7 @@ void getUserName()
 	std::string user = buffer;
 
 	std::cout << "NameSamCompatible: " << buffer << std::endl;
+	outputfile << "NameSamCompatible: " << buffer << std::endl;
 	//the below portion goes with getAccountInfo. Since that is currently on hold, the following code has been commented out.
 	/*LPWSTR userName = {0};
 	MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, buffer, -1, userName, 256);
@@ -429,9 +483,10 @@ void getUserName()
 };
 
 //reports information about the network adapters on the host machine using the GetAdaptersInfo API. 
-void getNetworkInfo()
+void getNetworkInfo(std::ofstream &outputfile)
 {
 	std::cout << std::endl << "[+] Network Adapters" << std::endl << std::endl;
+	outputfile << std::endl << "[+] Network Adapters" << std::endl << std::endl;
 
 	IP_ADAPTER_INFO  *pAdapterInfo;				//pointer to a adapter info 
 	ULONG            ulOutBufLen;				//buffer for input parameter
@@ -455,6 +510,7 @@ void getNetworkInfo()
 	if ((dwRetVal = GetAdaptersInfo(pAdapterInfo, &ulOutBufLen)) != ERROR_SUCCESS)
 	{
 		std::cout << "GetAdaptersInfo call failed with " << dwRetVal << std::endl;
+		outputfile << "GetAdaptersInfo call failed with " << dwRetVal << std::endl;
 	}
 
 	//store the adapter information in a PIP_ADAPTER_INFO object, this is essentially an array that stores all the adapters. We will iterate through this array and 
@@ -462,18 +518,26 @@ void getNetworkInfo()
 	PIP_ADAPTER_INFO pAdapter = pAdapterInfo;
 	while (pAdapter) {
 		std::cout << "Adapter Name: " << pAdapter->Description << std::endl;			//displays thhe network adapter name
+		outputfile << "Adapter Name: " << pAdapter->Description << std::endl;
 		std::cout << "\tIP Address: " << pAdapter->IpAddressList.IpAddress.String << std::endl;		//displays the ip address
+		outputfile << "\tIP Address: " << pAdapter->IpAddressList.IpAddress.String << std::endl;
 		std::cout << "\tIP Mask: " << pAdapter->IpAddressList.IpMask.String << std::endl;			//displays the subnet mask
+		outputfile << "\tIP Mask: " << pAdapter->IpAddressList.IpMask.String << std::endl;
 		std::cout << "\tGateway: " << pAdapter->GatewayList.IpAddress.String << std::endl;			//displays the gateway
+		outputfile << "\tGateway: " << pAdapter->GatewayList.IpAddress.String << std::endl;
 																									//checks if dhcp is enabled, if so state so and if it can find the dhcp server address, report it.
 		if (pAdapter->DhcpEnabled)
 		{
 			std::cout << "\tDHCP Enabled: Yes" << std::endl;
+			outputfile << "\tDHCP Enabled: Yes" << std::endl;
 			std::cout << "\t\tDHCP Server: \t" << pAdapter->DhcpServer.IpAddress.String << std::endl;
+			outputfile << "\t\tDHCP Server: \t" << pAdapter->DhcpServer.IpAddress.String << std::endl;
 		}
 		else
+		{
 			std::cout << "\tDHCP Enabled: No" << std::endl;
-
+			outputfile << "\tDHCP Enabled: No" << std::endl;
+		}
 		pAdapter = pAdapter->Next;	//move to the next adapter in the array
 	}
 
@@ -485,11 +549,14 @@ void getNetworkInfo()
 }
 
 //displays the netstat information for the host using the GetExtendedTCPTable API. This function gets the 
-void getNetstat()
+void getNetstat(std::ofstream &outputfile)
 {
 	std::cout << std::internal;
+	outputfile << std::internal;
 	std::cout << std::endl << "[+] Active Connections" << std::endl << std::endl;
+	outputfile << std::endl << "[+] Active Connections" << std::endl << std::endl;
 	std::cout << std::setw(10) << "  Proto" << std::setw(25) << "Local Address" << std::setw(35) << "Foreign Address" << std::setw(15) << "State" << std::setw(20) << "PID" << std::endl;
+	outputfile << std::setw(10) << "  Proto" << std::setw(25) << "Local Address" << std::setw(35) << "Foreign Address" << std::setw(15) << "State" << std::setw(20) << "PID" << std::endl;
 	PMIB_TCPTABLE_OWNER_PID pTCPtable;			//a pointer to the table that holds all of the network connections
 	PMIB_TCPROW_OWNER_PID pTCProw;				//a pointer to a specific row in the table
 	DWORD size = 0;									//the size of the table (number of entries)
@@ -503,7 +570,8 @@ void getNetstat()
 
 	if (pTCPtable == NULL)
 	{
-		printf("Error allocating memory\n");
+		std::cout << "Error allocating memory" << std::endl;
+		outputfile << "Error allocating memory" << std::endl;
 		return;
 	}
 
@@ -515,7 +583,8 @@ void getNetstat()
 		pTCPtable = (MIB_TCPTABLE_OWNER_PID *)malloc(size);				//reallocate the memory for the table to the correct size
 		if (pTCPtable == NULL)				//make sure the memory was allocated properly
 		{
-			printf("Error allocating memory\n");
+			std::cout << "Error allocating memory" << std::endl;
+			outputfile << "Error allocating memory" << std::endl;
 			return;
 		}
 	}
@@ -523,6 +592,7 @@ void getNetstat()
 	if (dwResult != NO_ERROR)		//if there was an error then return and dont go any further!!
 	{
 		std::cout << "There was an error getting the Extended TCP Table" << std::endl;
+		outputfile << "There was an error getting the Extended TCP Table" << std::endl;
 		return;
 	}
 
@@ -539,53 +609,70 @@ void getNetstat()
 
 
 		std::cout << std::setw(10) << "  TCP";				//print TCP
+		outputfile << std::setw(10) << "  TCP";
 		std::cout << std::setw(25) << localAddrStr << ":" << ntohs((u_short)pTCProw->dwLocalPort);			//the last function in this converts the port to human readable format (from binary value)
+		outputfile << std::setw(25) << localAddrStr << ":" << ntohs((u_short)pTCProw->dwLocalPort);
 		std::cout << std::setw(25) << remoteAddrStr << ":" << ntohs((u_short)pTCProw->dwRemotePort);
+		outputfile << std::setw(25) << remoteAddrStr << ":" << ntohs((u_short)pTCProw->dwRemotePort);
 
 		//checks all the different possible states and prints the wording for that state
 		switch (pTCProw->dwState) {
 		case MIB_TCP_STATE_CLOSED:
 			std::cout << std::setw(20) << "CLOSED\t";
+			outputfile << std::setw(20) << "CLOSED\t";
 			break;
 		case MIB_TCP_STATE_LISTEN:
 			std::cout << std::setw(20) << "LISTEN\t";
+			outputfile << std::setw(20) << "LISTEN\t";
 			break;
 		case MIB_TCP_STATE_SYN_SENT:
 			std::cout << std::setw(20) << "SYN-SENT\t";
+			outputfile << std::setw(20) << "SYN-SENT\t";
 			break;
 		case MIB_TCP_STATE_SYN_RCVD:
 			std::cout << std::setw(20) << "SYN-RECEIVED\t";
+			outputfile << std::setw(20) << "SYN-RECEIVED\t";
 			break;
 		case MIB_TCP_STATE_ESTAB:
 			std::cout << std::setw(20) << "ESTABLISHED\t";
+			outputfile << std::setw(20) << "ESTABLISHED\t";
 			break;
 		case MIB_TCP_STATE_FIN_WAIT1:
 			std::cout << std::setw(20) << "FIN-WAIT-1\t";
+			outputfile << std::setw(20) << "FIN-WAIT-1\t";
 			break;
 		case MIB_TCP_STATE_FIN_WAIT2:
 			std::cout << std::setw(20) << "FIN-WAIT-2 \t";
+			outputfile << std::setw(20) << "FIN-WAIT-2 \t";
 			break;
 		case MIB_TCP_STATE_CLOSE_WAIT:
 			std::cout << std::setw(20) << "CLOSE-WAIT\t";
+			outputfile << std::setw(20) << "CLOSE-WAIT\t";
 			break;
 		case MIB_TCP_STATE_CLOSING:
 			std::cout << std::setw(20) << "CLOSING\t";
+			outputfile << std::setw(20) << "CLOSING\t";
 			break;
 		case MIB_TCP_STATE_LAST_ACK:
 			std::cout << std::setw(20) << "LAST-ACK\t";
+			outputfile << std::setw(20) << "LAST-ACK\t";
 			break;
 		case MIB_TCP_STATE_TIME_WAIT:
 			std::cout << std::setw(20) << "TIME-WAIT\t";
+			outputfile << std::setw(20) << "TIME-WAIT\t";
 			break;
 		case MIB_TCP_STATE_DELETE_TCB:
 			std::cout << std::setw(20) << "DELETE-TCB\t";
+			outputfile << std::setw(20) << "DELETE-TCB\t";
 			break;
 		default:
 			std::cout << std::setw(20) << "UNKNOWN dwState value\t";
+			outputfile << std::setw(20) << "UNKNOWN dwState value\t";
 			break;
 		}
 		//print the PID
 		std::cout << std::setw(10) << pTCProw->dwOwningPid << std::endl;
+		outputfile << std::setw(10) << pTCProw->dwOwningPid << std::endl;
 	}
 	//free the memory for the pointers and ge on your way!!!
 	pTCProw = NULL;
@@ -595,13 +682,16 @@ void getNetstat()
 };
 
 //Uses the GetIpForwardTable API to get information about the hosts routes
-void getRoutes()
+void getRoutes(std::ofstream &outputfile)
 {
 
 	//print the header
 	std::cout << std::endl << "[+] Routes" << std::endl << std::endl;
 	std::cout << std::left;
 	std::cout << std::setw(25) << "Network Destination" << std::setw(25) << "Netmask" << std::setw(25) << "Gateway" << std::setw(25) << "Interface" << std::setw(25) << "Metric" << std::endl;
+	outputfile << std::endl << "[+] Routes" << std::endl << std::endl;
+	outputfile << std::left;
+	outputfile << std::setw(25) << "Network Destination" << std::setw(25) << "Netmask" << std::setw(25) << "Gateway" << std::setw(25) << "Interface" << std::setw(25) << "Metric" << std::endl;
 	// Declare and initialize variables.
 
 	/* variables used for GetIfForwardTable */
@@ -616,7 +706,8 @@ void getRoutes()
 																					//ensure memory was allocated correctly
 	if (pIpForwardTable == NULL)
 	{
-		printf("Error allocating memory\n");
+		std::cout << "Error allocating memory" << std::endl;
+		outputfile << "Error allocating memory" << std::endl;
 		return;
 	}
 
@@ -628,7 +719,8 @@ void getRoutes()
 																		//ensure memory was correctly allocated
 		if (pIpForwardTable == NULL)
 		{
-			printf("Error allocating memory\n");
+			std::cout << "Error allocating memory" << std::endl;
+			outputfile << "Error allocating memory" << std::endl;
 			return;
 		}
 	}
@@ -654,20 +746,26 @@ void getRoutes()
 
 			//print the destIP and Mask
 			std::cout << std::setw(25) << destIP;
+			outputfile << std::setw(25) << destIP;
 			std::cout << std::setw(25) << maskIP;
+			outputfile << std::setw(25) << maskIP;
 			//on the first entry we know that it is the default gateway so were just gonna print it how it is (this is hacky I know)
 			if (i == 0)
 			{
 				std::cout << std::setw(25) << gatewayIP;
+				outputfile << std::setw(25) << gatewayIP;
 				std::cout << std::setw(25) << pIpForwardRow->dwForwardIfIndex;
+				outputfile << std::setw(25) << pIpForwardRow->dwForwardIfIndex;
 			}
 			//for the rest of the entries were going to print the gateway as On-Link (this will need to be changed as we have multiple interfaces but for now it works)
 			//in the future i will need to compare the interface index to one gathered from the network adapter and then print the IP from that...
 			else
 			{
 				std::cout << std::setw(25) << "On-link" << std::setw(25) << gatewayIP;
+				outputfile << std::setw(25) << "On-link" << std::setw(25) << gatewayIP;
 			}
 			std::cout << std::setw(25) << pIpForwardRow->dwForwardMetric1 << std::endl;
+			outputfile << std::setw(25) << pIpForwardRow->dwForwardMetric1 << std::endl;
 		}
 		pIpForwardRow = NULL;			//NULL out the row so we can free
 		free(pIpForwardTable);			//free the table
@@ -675,7 +773,8 @@ void getRoutes()
 		return;
 	}
 	else {
-		printf("\tGetIpForwardTable failed.\n");
+		std::cout << "\tGetIpForwardTable failed." << std::endl;
+		outputfile << "\tGetIpForwardTable failed." << std::endl;
 		pIpForwardRow = NULL;
 		free(pIpForwardTable);
 		free(pIpForwardRow);
@@ -685,7 +784,7 @@ void getRoutes()
 
 
 //gets info on the computer's memory.
-void getMemoryInfo()
+void getMemoryInfo(std::ofstream &outputfile)
 {
 	MEMORYSTATUSEX memStat;
 
@@ -698,10 +797,17 @@ void getMemoryInfo()
 	std::cout << "Available physical memory: " << memStat.ullAvailPhys / DIV << "GB" << std::endl;
 	std::cout << "Total virtual memory: " << memStat.ullTotalVirtual / DIV << "GB" << std::endl;
 	std::cout << "Available virtual memeory: " << memStat.ullAvailVirtual / DIV << "GB" << std::endl;
+
+	outputfile << std::endl << "[+] Memory" << std::endl << std::endl;
+	outputfile << "Memory in use: " << memStat.dwMemoryLoad << "%" << std::endl;
+	outputfile << "Total physical memory: " << memStat.ullTotalPhys / DIV << "GB" << std::endl;
+	outputfile << "Available physical memory: " << memStat.ullAvailPhys / DIV << "GB" << std::endl;
+	outputfile << "Total virtual memory: " << memStat.ullTotalVirtual / DIV << "GB" << std::endl;
+	outputfile << "Available virtual memeory: " << memStat.ullAvailVirtual / DIV << "GB" << std::endl;
 };
 
 //Creates a snapshot of the processes running on the host and then prints each one out one by one. Uses the CreateToolhelp32Snapshot function and the OpenProcess API
-void getProcesses()
+void getProcesses(std::ofstream &outputfile)
 {
 	HANDLE hProcessSnap;				//Handle on the process snapshot
 	HANDLE hProcess;					//handle on the current process being printed

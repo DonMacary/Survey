@@ -5,7 +5,7 @@
 /   FUNCTIONS:
 /		getSystemInfo();
 /			get-systeminfo will gather basic system information. (Hardware/OS Info)
-/				OS Name 
+/				OS Name
 /				OS Version
 /				Architecture
 /				Hostname
@@ -37,16 +37,20 @@
 #include <ws2tcpip.h>
 #include <iostream>
 #include "Function_calls.h"
+#include <fstream>
 
 int main(void)
 {
-	getSystemInfo();
-	getUserName();
-	getNetworkInfo();
-	getNetstat();
-	getRoutes();
-	getMemoryInfo();
-	getProcesses();
+	std::ofstream outputfile;
+	outputfile.open("results.txt", std::fstream::app);
+	getSystemInfo(outputfile);
+	getUserName(outputfile);
+	getNetworkInfo(outputfile);
+	getNetstat(outputfile);
+	getRoutes(outputfile);
+	getMemoryInfo(outputfile);
+	getProcesses(outputfile);
+	outputfile.close();
 	getchar();
 	getchar();
 	return 0;

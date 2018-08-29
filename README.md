@@ -1,12 +1,7 @@
 # **Windows Survey**
 This program is intended to be a windows post-exploitation tool to scout the target Windows operating system via API calls. The program will gather the information from the operating system and will output it to a file (eventually using google protobuff for easily transferable data)
 
-**Proposed project timeline:** (remove from final)
-
-    Day 1 - Project outline
-    Day 2 & 3 - Learn windows API in c++, Google protobuff
-    Day 4 - Create one function (system info) and output to file using protobuff
-    Day 5 - 8 Create as many of the other functions as possible
+**NOTE: All functions now take in a ofstream file object and print to a file called results.txt, this file name and locaton can be changed by editing the win_survey.cpp file!!**
 
 **The program will (hopefully) incorporate the following functions:**
 
