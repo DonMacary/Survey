@@ -875,6 +875,8 @@ void getProcesses(std::ofstream &outputfile)
 //gets some basic data on the BIOS
 void getBIOS(std::ofstream &outputfile)
 {
+	std::cout << std::endl << "[+] BIOS" << std::endl;
+	outputfile << std::endl << "[+] BIOS" << std::endl;
 	typedef struct RAW_SMBIOS_DATA
 	{
 		BYTE    Used20CallingMethod;
@@ -893,6 +895,9 @@ void getBIOS(std::ofstream &outputfile)
 		int minor = pData->MinorVersion;
 		std::cout << "SMBios Version: " << major << "." << minor << std::endl;
 		std::cout << "SMBios Table Length: " << pData->Length << " bytes" << std::endl;
+
+		outputfile << "SMBios Version: " << major << "." << minor << std::endl;
+		outputfile << "SMBios Table Length: " << pData->Length << " bytes" << std::endl;
 	}
 }
 
